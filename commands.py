@@ -42,7 +42,7 @@ def getUsers(db):
                        'name': user.name,
                        'username': user.username,
                        'role': user.role} for user in users]
-    return json_response
+    return json.dumps(json_response)
 
 @delete('/user/:id')
 def deleteUser(id, db):
@@ -83,7 +83,7 @@ def getUnits(db):
     units = db.query(Unit)
     json_response = [ {'id': unit.id,
                         'name': unit.name} for unit in units]
-    return json_response
+    return json.dumps(json_response)
 
 @delete('/unit/:id')
 def deleteUnit(id,db):
@@ -124,7 +124,7 @@ def getArticleTypes(db):
     articleTypes = db.query(ArticleType)
     json_response = [ {'id': a.id,
                         'name': a.name} for a in articleTypes]
-    return json_response
+    return json.dumps(json_response)
 
 @delete('/articleType/:id')
 def deleteArticleType(id,db):
@@ -166,7 +166,7 @@ def getSuppliers(db):
         json_response = [
                 {'id': s.id,
                     'name': s.name} for s in suppliers]
-        return json_response
+        return json.dumps(json_response)
 
 @delete('/supplier/:id')
 def deleteSupplier(id,db):
@@ -215,7 +215,7 @@ def getSectors(db):
             {'id': s.id,
                 'name': s.name,
                 'parent': s.parent} for s in sectors]
-    return json_response
+    return json.dumps(json_response)
 
 @delete('/sector/:id')
 def deleteSector(id, db):
@@ -289,7 +289,7 @@ def deletePerson(id,db):
 def getPersons(db):
     persons= db.query(Person)
     json_response = [ { 'id': person.id } for person in persons]
-    return json_response
+    return json.dumps(json_response)
 
 @put('/customer')
 @post('/customer')
@@ -340,14 +340,14 @@ def deleteCustomer(id,db):
 @get('/customers')
 def getCustomers(db):
     customers = db.query(Customer)
-    return [{'id' : cust.id } for cust in customers]
+    return json.dumps([{'id' : cust.id } for cust in customers])
 
 @get('/customersBySector/:id')
 def getCustomersBySector(id,db):
     try:
         customers = db.query(Customer).filter(or_ (Customer.sector==id),
                 (Customer.subsector==id))
-        return [{'id' : cust.id } for cust in customers]
+        return json.dumps([{'id' : cust.id } for cust in customers])
     except:
         resource_not_found("Customers")
 
@@ -398,7 +398,7 @@ def getAddress(id,db):
 def getAddresses(db):
     addresses = db.query(Address)
     json_response = [ {'id': a.id} for a in addresses]
-    return json_response
+    return json.dumps(json_response)
 
 @delete('/address/:id')
 def deleteAddress(id,db):
@@ -444,13 +444,13 @@ def updateArticle(id,db):
 @get('/articles')
 def getArticles(db):
     articles = db.query(Article)
-    return [ {'id': a.id } for a in articles ]
+    return json.dumps([ {'id': a.id } for a in articles ])
 
 @get('/articleBySupplier/:supplierId')
 def getArticlesBySupplier(supplierId,db):
     try:
         articles = db.query(Article).filter_by(supplier=supplierId).all()
-        return [ {'id': a.id } for a in articles ]
+        return json.dumps([ {'id': a.id } for a in articles ])
     except:
         resource_not_found("Article")
 
@@ -524,7 +524,7 @@ def getStocks(db):
     json_response = [ {'id': s.id,
         'article': s.article,
         'quantity': s.quantity} for s in stocks ]
-    return json_response
+    return json.dumps(json_response)
 
 @put('/invoiceLine')
 @post('/invoiceLine')
@@ -570,7 +570,7 @@ def getInvoiceLine(id,db):
 @get('/invoiceLines')
 def getInvoiceLines(db):
     invoice_lines = db.query(InvoiceLine)
-    return [{'id': i.id} for i in invoice_lines]
+    return json.dumps([{'id': i.id} for i in invoice_lines])
 
 @delete('/invoiceLine/:id')
 def deleteInvoiceLine(id,db):
@@ -657,7 +657,7 @@ def getInvoice(id,db):
 @get('/invoices')
 def getInvoices(db):
     invoices = db.query(Invoice)
-    return [ {'id': i.id} for i in invoices]
+    return json.dumps([ {'id': i.id} for i in invoices])
 
 def resource_not_found(resource):
     abort(404, "%s Not Found" %resource)
