@@ -1,4 +1,4 @@
-from bottle import HTTPError, run, route,default_app
+from bottle import HTTPError, run, route,default_app,debug
 import model
 import commands
 import sys
@@ -16,6 +16,7 @@ def hello():
     return "hello, world"
 
 app = default_app()
+debug(True)
 
 def main():
     run(host='localhost', port=8080)

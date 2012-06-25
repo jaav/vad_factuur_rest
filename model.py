@@ -22,7 +22,6 @@ class Unit(Base):
     id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     article = relationship("Article")
-    invoice = relationship("Invoice")
 
     def __init__(self, name):
         self.name = name
@@ -102,6 +101,8 @@ class Customer(Base):
     address = relationship("Address")
     sector = Column(BigInteger, ForeignKey("sector.id"))
     subsector = Column(BigInteger, ForeignKey("sector.id"))
+    relationship("sector",primaryjoin="sector.id==customer.sector")
+    relationship("sector",primaryjoin="sector.id==customer.subsector")
 
     def __init__(self, name, vat, iban, remark, sector, subsector):
         self.name = name
@@ -133,7 +134,6 @@ class Sector(Base):
     name = Column(String(100))
     parent = Column(BigInteger, ForeignKey("sector.id"))
     children = relationship("Sector")
-    customer = relationship("Customer")
 
     def __init__(self, name, parent):
         self.name = name
@@ -169,7 +169,6 @@ class Address(Base):
     tel = Column(String(20))
     fax = Column(String(20))
     email = Column(String(200))
-    invoice = relationship("Invoice")
 
     def __init__(self, customer, address_type, address, zipcode, city, tel, fax, email):
         self.customer = customer
@@ -198,6 +197,8 @@ class Invoice(Base):
     weight = Column(Float)
     status = Column(Integer)
     creator = Column(BigInteger, ForeignKey("user.id"))
+    relationship("address",primaryjoin="address.id==invoice.del_address")
+    relationship("address",primaryjoin="address.id==invoice.inv_address")
     invoice_line = relationship("InvoiceLine")
 
     def __init__(self, customer, inv_address, del_address, code, remark, shipping, total, vat, creation_date, delivery_date, paid_date, weight, status, creator):
