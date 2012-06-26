@@ -1,4 +1,5 @@
 import json
+from time import strptime
 from bottle import get, post, put, delete, request, abort
 import hashlib
 from sqlalchemy import or_
@@ -422,7 +423,7 @@ def addArticle(db):
             code=json_input.get('code'), name=json_input.get('name'),
             description=json_input.get('description'),list_price=json_input.get('listPrice'),
             unit=json_input.get('unit'),supplier=json_input.get('supplier'),
-            weight=json_input.get('weight'), create_date=json_input.get('create_date'),
+            weight=json_input.get('weight'), create_date=strptime(json_input.get('create_date'),"%d/%m/%Y"),
             vat=json_input.get('vat'),creator=json_input.get('creator'))
     db.add(article)
 
@@ -438,7 +439,7 @@ def updateArticle(id,db):
         if json_input.get('listPrice'): article.list_price=json_input.get('listPrice')
         if json_input.get('unit'): article.unit=json_input.get('unit')
         if json_input.get('weight'): article.weight=json_input.get('weight')
-        if json_input.get('create_date'): article.create_date=json_input.get('create_date')
+        if json_input.get('create_date'): article.create_date=strptime(json_input.get('create_date'), "%d/%m/%Y")
         if json_input.get('vat'): article.vat=json_input.get('vat')
         if json_input.get('creator'): article.creator=json_input.get('creator')
         if json_input.get('supplier'): article.supplier=json_input.get('supplier')
@@ -601,9 +602,9 @@ def addInvoice(db):
             shipping=json_input.get("shipping"),
             total=json_input.get("total"),
             vat=json_input.get("vat"),
-            creation_date=json_input.get("creation_date"),
-            delivery_date=json_input.get("delivery_date"),
-            paid_date=json_input.get("paid_date"),
+            creation_date=strptime(json_input.get("creation_date"),"%d/%m/%Y"),
+            delivery_date=strptime(json_input.get("delivery_date"),"%d/%m/%Y"),
+            paid_date=strptime(json_input.get("paid_date"),"%d/%m/%Y"),
             weight=json_input.get("weight"),
             status=json_input.get("status"),
             creator=json_input.get("creator"),
@@ -623,9 +624,9 @@ def updateInvoice(id,db):
         if json_input.get("shipping"):invoice.shipping=json_input.get("shipping")
         if json_input.get("total"):invoice.total=json_input.get("total")
         if json_input.get("vat"):invoice.vat=json_input.get("vat")
-        if json_input.get("creation_date"):invoice.creation_date=json_input.get("creation_date")
-        if json_input.get("delivery_date"):invoice.delivery_date=json_input.get("delivery_date")
-        if json_input.get("paid_date"):invoice.paid_date=json_input.get("paid_date")
+        if json_input.get("creation_date"):invoice.creation_date=strptime(json_input.get("creation_date"),"%d/%m/%Y")
+        if json_input.get("delivery_date"):invoice.delivery_date=strptime(json_input.get("delivery_date"),"%d/%m/%Y")
+        if json_input.get("paid_date"):invoice.paid_date=strptime(json_input.get("paid_date"),"%d/%m/%Y")
         if json_input.get("weight"):invoice.weight=json_input.get("weight")
         if json_input.get("status"):invoice.status=json_input.get("status")
         if json_input.get("creator"):invoice.creator=json_input.get("creator")
