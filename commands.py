@@ -53,7 +53,7 @@ def deleteUser(id, db):
         resource_not_found( 'User')
 
 @put('/unit')
-@post('unit')
+@post('/unit')
 def setUnit(db):
     json_input = get_input_json(request)
     unit = Unit(name=json_input.get("name"))
@@ -178,7 +178,7 @@ def deleteSupplier(id,db):
 
 @put('/sector')
 @post('/sector')
-def addSector(id, db):
+def addSector(db):
     json_input = get_input_json(request)
     sector = Sector(json_input.get('name'),json_input.get('parent'))
     db.add(sector) 
@@ -345,8 +345,8 @@ def getCustomers(db):
 @get('/customersBySector/:id')
 def getCustomersBySector(id,db):
     try:
-        customers = db.query(Customer).filter(or_ (Customer.sector==id),
-                (Customer.subsector==id))
+        customers = db.query(Customer).filter(or_ (Customer.sector==id,
+                Customer.subsector==id))
         return json.dumps([{'id' : cust.id } for cust in customers])
     except:
         resource_not_found("Customers")
@@ -394,7 +394,7 @@ def getAddress(id,db):
     except:
         resource_not_found('Address')
 
-@get('/addresses')
+@get('/addresss')
 def getAddresses(db):
     addresses = db.query(Address)
     json_response = [ {'id': a.id} for a in addresses]
@@ -408,6 +408,11 @@ def deleteAddress(id,db):
     except:
         resource_not_found('Address')
 
+
+@get('/articles')
+def getArticles(db):
+    articles = db.query(Article)
+    return json.dumps([ {'id': a.id } for a in articles ])
 
 @put('/article')
 @post('/article')
@@ -441,10 +446,6 @@ def updateArticle(id,db):
     except:
         resource_not_found("Article")
 
-@get('/articles')
-def getArticles(db):
-    articles = db.query(Article)
-    return json.dumps([ {'id': a.id } for a in articles ])
 
 @get('/articleBySupplier/:supplierId')
 def getArticlesBySupplier(supplierId,db):
@@ -464,7 +465,7 @@ def getArticle(id,db):
                  'name': article.name,
                  'description': article.description,
                  'listPrice': article.list_price,
-                 'unit': article.Unit,
+                 'unit': article.unit,
                  'weight': article.weight,
                  'create_date': article.create_date,
                  'vat': article.vat,
@@ -563,7 +564,15 @@ def getInvoiceLine(id,db):
                 'unit_price': invoice_line.unit_price,
                 'discount': invoice_line.discount,
                 'unit_discount': invoice_line.unit_discount,
-                'invoice': invoice_line.invoce }
+                'invoice': invoice_line.invoice }
+    except:
+        resource_not_found("InvoiceLine")
+
+@get('/invoiceLineByInvoice/:invoice_id')
+def getInvoiceLineByInvoice(invoice_id,db):
+    try:
+        invoice_lines = db.query(InvoiceLine).filter_by(invoice=invoice_id)
+        return json.dumps([{'id': invoice_line.id} for invoice_line in invoice_lines])
     except:
         resource_not_found("InvoiceLine")
 
@@ -646,7 +655,7 @@ def getInvoice(id,db):
                 'total': invoice.total,
                 'vat': invoice.vat,
                 'creation_date': invoice.creation_date,
-                'delivery_date': invoice.deliver_date,
+                'delivery_date': invoice.delivery_date,
                 'paid_date': invoice.paid_date,
                 'weight': invoice.weight,
                 'status': invoice.status,
