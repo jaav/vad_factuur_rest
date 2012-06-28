@@ -36,4 +36,5 @@ def assertNotNone(a,b):
 def assertNone(a,b):
     assert a.get(b) == None
 test_hello_world()
+add_user()
 get_users()
