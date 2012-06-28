@@ -78,7 +78,7 @@ class Article(Base):
         self.article_type = article_type
         self.unit = unit
         self.creator = creator
-        self.supplier =- supplier
+        self.supplier = supplier
 
 class Stock(Base):
     __tablename__ = 'stock'
@@ -109,7 +109,7 @@ class Customer(Base):
         self.vat = vat
         self.iban = iban
         self.remark = remark
-        self.sector = Sector
+        self.sector = sector
         self.subsector = subsector
 
 class Person(Base):

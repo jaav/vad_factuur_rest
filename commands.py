@@ -1,4 +1,5 @@
 import json
+from time import strptime
 from bottle import get, post, put, delete, request, abort
 import hashlib
 from sqlalchemy import or_
@@ -53,7 +54,7 @@ def deleteUser(id, db):
         resource_not_found( 'User')
 
 @put('/unit')
-@post('unit')
+@post('/unit')
 def setUnit(db):
     json_input = get_input_json(request)
     unit = Unit(name=json_input.get("name"))
@@ -178,7 +179,7 @@ def deleteSupplier(id,db):
 
 @put('/sector')
 @post('/sector')
-def addSector(id, db):
+def addSector(db):
     json_input = get_input_json(request)
     sector = Sector(json_input.get('name'),json_input.get('parent'))
     db.add(sector) 
@@ -345,8 +346,8 @@ def getCustomers(db):
 @get('/customersBySector/:id')
 def getCustomersBySector(id,db):
     try:
-        customers = db.query(Customer).filter(or_ (Customer.sector==id),
-                (Customer.subsector==id))
+        customers = db.query(Customer).filter(or_ (Customer.sector==id,
+                Customer.subsector==id))
         return json.dumps([{'id' : cust.id } for cust in customers])
     except:
         resource_not_found("Customers")
@@ -394,7 +395,7 @@ def getAddress(id,db):
     except:
         resource_not_found('Address')
 
-@get('/addresses')
+@get('/addresss')
 def getAddresses(db):
     addresses = db.query(Address)
     json_response = [ {'id': a.id} for a in addresses]
@@ -409,6 +410,11 @@ def deleteAddress(id,db):
         resource_not_found('Address')
 
 
+@get('/articles')
+def getArticles(db):
+    articles = db.query(Article)
+    return json.dumps([ {'id': a.id } for a in articles ])
+
 @put('/article')
 @post('/article')
 def addArticle(db):
@@ -417,7 +423,7 @@ def addArticle(db):
             code=json_input.get('code'), name=json_input.get('name'),
             description=json_input.get('description'),list_price=json_input.get('listPrice'),
             unit=json_input.get('unit'),supplier=json_input.get('supplier'),
-            weight=json_input.get('weight'), create_date=json_input.get('create_date'),
+            weight=json_input.get('weight'), create_date=strptime(json_input.get('create_date'),"%d/%m/%Y"),
             vat=json_input.get('vat'),creator=json_input.get('creator'))
     db.add(article)
 
@@ -433,7 +439,7 @@ def updateArticle(id,db):
         if json_input.get('listPrice'): article.list_price=json_input.get('listPrice')
         if json_input.get('unit'): article.unit=json_input.get('unit')
         if json_input.get('weight'): article.weight=json_input.get('weight')
-        if json_input.get('create_date'): article.create_date=json_input.get('create_date')
+        if json_input.get('create_date'): article.create_date=strptime(json_input.get('create_date'), "%d/%m/%Y")
         if json_input.get('vat'): article.vat=json_input.get('vat')
         if json_input.get('creator'): article.creator=json_input.get('creator')
         if json_input.get('supplier'): article.supplier=json_input.get('supplier')
@@ -441,10 +447,6 @@ def updateArticle(id,db):
     except:
         resource_not_found("Article")
 
-@get('/articles')
-def getArticles(db):
-    articles = db.query(Article)
-    return json.dumps([ {'id': a.id } for a in articles ])
 
 @get('/articleBySupplier/:supplierId')
 def getArticlesBySupplier(supplierId,db):
@@ -464,7 +466,7 @@ def getArticle(id,db):
                  'name': article.name,
                  'description': article.description,
                  'listPrice': article.list_price,
-                 'unit': article.Unit,
+                 'unit': article.unit,
                  'weight': article.weight,
                  'create_date': article.create_date,
                  'vat': article.vat,
@@ -563,7 +565,15 @@ def getInvoiceLine(id,db):
                 'unit_price': invoice_line.unit_price,
                 'discount': invoice_line.discount,
                 'unit_discount': invoice_line.unit_discount,
-                'invoice': invoice_line.invoce }
+                'invoice': invoice_line.invoice }
+    except:
+        resource_not_found("InvoiceLine")
+
+@get('/invoiceLineByInvoice/:invoice_id')
+def getInvoiceLineByInvoice(invoice_id,db):
+    try:
+        invoice_lines = db.query(InvoiceLine).filter_by(invoice=invoice_id)
+        return json.dumps([{'id': invoice_line.id} for invoice_line in invoice_lines])
     except:
         resource_not_found("InvoiceLine")
 
@@ -592,9 +602,9 @@ def addInvoice(db):
             shipping=json_input.get("shipping"),
             total=json_input.get("total"),
             vat=json_input.get("vat"),
-            creation_date=json_input.get("creation_date"),
-            delivery_date=json_input.get("delivery_date"),
-            paid_date=json_input.get("paid_date"),
+            creation_date=strptime(json_input.get("creation_date"),"%d/%m/%Y"),
+            delivery_date=strptime(json_input.get("delivery_date"),"%d/%m/%Y"),
+            paid_date=strptime(json_input.get("paid_date"),"%d/%m/%Y"),
             weight=json_input.get("weight"),
             status=json_input.get("status"),
             creator=json_input.get("creator"),
@@ -614,9 +624,9 @@ def updateInvoice(id,db):
         if json_input.get("shipping"):invoice.shipping=json_input.get("shipping")
         if json_input.get("total"):invoice.total=json_input.get("total")
         if json_input.get("vat"):invoice.vat=json_input.get("vat")
-        if json_input.get("creation_date"):invoice.creation_date=json_input.get("creation_date")
-        if json_input.get("delivery_date"):invoice.delivery_date=json_input.get("delivery_date")
-        if json_input.get("paid_date"):invoice.paid_date=json_input.get("paid_date")
+        if json_input.get("creation_date"):invoice.creation_date=strptime(json_input.get("creation_date"),"%d/%m/%Y")
+        if json_input.get("delivery_date"):invoice.delivery_date=strptime(json_input.get("delivery_date"),"%d/%m/%Y")
+        if json_input.get("paid_date"):invoice.paid_date=strptime(json_input.get("paid_date"),"%d/%m/%Y")
         if json_input.get("weight"):invoice.weight=json_input.get("weight")
         if json_input.get("status"):invoice.status=json_input.get("status")
         if json_input.get("creator"):invoice.creator=json_input.get("creator")
@@ -646,7 +656,7 @@ def getInvoice(id,db):
                 'total': invoice.total,
                 'vat': invoice.vat,
                 'creation_date': invoice.creation_date,
-                'delivery_date': invoice.deliver_date,
+                'delivery_date': invoice.delivery_date,
                 'paid_date': invoice.paid_date,
                 'weight': invoice.weight,
                 'status': invoice.status,
