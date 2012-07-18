@@ -67,6 +67,7 @@ def login(db):
    if ok:
        response.set_cookie('username',username,settings.cookie_secret)
        response.set_cookie('password',hashlib.md5(password.encode('utf-8')).hexdigest(),settings.cookie_secret)
+       return {'auth': 'User Authenticated'}
    else:
        forbidden()
 
