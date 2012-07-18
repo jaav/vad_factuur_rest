@@ -6,7 +6,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
-engine = create_engine('mysql://root:@localhost/vad2',echo=True)
+engine = create_engine('mysql://root:@localhost/vad3',echo=True)
 
 class ArticleType(Base):
     __tablename__ = 'article_type'

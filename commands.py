@@ -1,19 +1,22 @@
 import json
 from time import strptime
-from bottle import get, post, put, delete, request, abort
+from bottle import get, post, put, delete, request, abort, response
 import hashlib
+import settings
 from sqlalchemy import or_
 from model import User, Unit, ArticleType, Supplier, Sector, Person, Customer, Address, Article, Stock, InvoiceLine, Invoice
 
 @put('/user')
 @post('/user')
 def setUser(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     user = User(name=json_input.get("name"), username=json_input.get("username"), password=json_input.get("password"), role=json_input.get("role"))
     db.add(user)
 
 @post('/user/:id')
 def updateUser(id,db):
+    isValidUser(db,request)
     try:
         user = db.query(User).filter_by(id=id).first()
         json_input = get_input_json(request)
@@ -27,6 +30,7 @@ def updateUser(id,db):
 
 @get('/user/:id')
 def getUser(id,db):
+    isValidUser(db,request)
     try:
         user = db.query(User).filter_by(id=id).first()
         return {'id': user.id,
@@ -38,6 +42,7 @@ def getUser(id,db):
 
 @get('/users')
 def getUsers(db):
+    isValidUser(db,request)
     users = db.query(User)
     json_response = [ {'id': user.id,
                        'name': user.name,
@@ -47,21 +52,63 @@ def getUsers(db):
 
 @delete('/user/:id')
 def deleteUser(id, db):
+    isValidUser(db,request)
     try:
         user = db.query(User).filter_by(id=id).first()
         db.delete(user)
     except:
         resource_not_found( 'User')
 
+@post('/login')
+def login(db):
+   username = request.params.get('username') 
+   password = request.params.get('password')
+   ok = check(db,username,password)
+   if ok:
+       response.set_cookie('username',username,settings.cookie_secret)
+       response.set_cookie('password',hashlib.md5(password.encode('utf-8')).hexdigest(),settings.cookie_secret)
+   else:
+       forbidden()
+
+def check(db,username,password):
+    if not username or not password:
+        return False
+    password = hashlib.md5(password.encode('utf-8')).hexdigest()
+    try:
+        user = db.query(User).filter(or_ (User.username==username,
+                User.password_hash==password))
+        if user:
+            return True
+        else:
+            return False
+    except:
+        return False
+
+def isValidUser(db,request):
+    username = request.get_cookie("username", settings.cookie_secret)
+    password = request.get_cookie("password", settings.cookie_secret)
+    if not username or not password:
+        forbidden()
+    try:
+        user = db.query(User).filter(or_ (User.username==username,User.password_hash==password))
+        if user:
+            return True
+        else:
+            forbidden()
+    except:
+        forbidden()
+
 @put('/unit')
 @post('/unit')
 def setUnit(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     unit = Unit(name=json_input.get("name"))
     db.add(unit)
 
 @post('/unit/:id')
 def updateUnit(id,db):
+    isValidUser(db,request)
     try:
         unit = db.query(Unit).filter_by(id=id).first()
         json_input = get_input_json(request)
@@ -72,6 +119,7 @@ def updateUnit(id,db):
 
 @get('/unit/:id')
 def getUnit(id,db):
+    isValidUser(db,request)
     try:
         unit = db.query(Unit).filter_by(id=id).first()
         return {'id': unit.id,
@@ -81,6 +129,7 @@ def getUnit(id,db):
 
 @get('/units')
 def getUnits(db):
+    isValidUser(db,request)
     units = db.query(Unit)
     json_response = [ {'id': unit.id,
                         'name': unit.name} for unit in units]
@@ -88,6 +137,7 @@ def getUnits(db):
 
 @delete('/unit/:id')
 def deleteUnit(id,db):
+    isValidUser(db,request)
     try:
         unit = db.query(Unit).filter_by(id=id).first()
         db.delete(unit)
@@ -97,12 +147,14 @@ def deleteUnit(id,db):
 @put('/articleType')
 @post('/articleType')
 def addArticleType(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     articleType = ArticleType(name=json_input.get("name"))
     db.add(articleType)
 
 @post('/articleType/:id')
 def updateArticleType(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         articleType = db.query(ArticleType).filter_by(id=id).first()
@@ -113,6 +165,7 @@ def updateArticleType(id,db):
 
 @get('/articleType/:id')
 def getArticleType(id,db):
+    isValidUser(db,request)
     try:
         articleType = db.query(ArticleType).filter_by(id=id).first()
         return {'id': articleType.id,
@@ -122,6 +175,7 @@ def getArticleType(id,db):
 
 @get('/articleTypes')
 def getArticleTypes(db):
+    isValidUser(db,request)
     articleTypes = db.query(ArticleType)
     json_response = [ {'id': a.id,
                         'name': a.name} for a in articleTypes]
@@ -129,6 +183,7 @@ def getArticleTypes(db):
 
 @delete('/articleType/:id')
 def deleteArticleType(id,db):
+    isValidUser(db,request)
     try:
         articleType = db.query(ArticleType).filter_by(id=id).first()
         db.delete(articleType)
@@ -138,12 +193,14 @@ def deleteArticleType(id,db):
 @put('/supplier')
 @post('/supplier')
 def addSupplier(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     supplier = Supplier(name=json_input.get("name"))
     db.add(supplier)
 
 @post('/supplier/:id')
 def updateSupplier(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         supplier = db.query(Supplier).filter_by(id=id).first()
@@ -154,6 +211,7 @@ def updateSupplier(id,db):
 
 @get('/supplier/:id')
 def getSupplier(id,db):
+    isValidUser(db,request)
     try:
         supplier = db.query(Supplier).filter_by(id=id).first()
         return {'id': supplier.id,
@@ -163,14 +221,16 @@ def getSupplier(id,db):
 
 @get('/suppliers')
 def getSuppliers(db):
-        suppliers = db.query(Supplier)
-        json_response = [
-                {'id': s.id,
-                    'name': s.name} for s in suppliers]
-        return json.dumps(json_response)
+    isValidUser(db,request)
+    suppliers = db.query(Supplier)
+    json_response = [
+            {'id': s.id,
+                'name': s.name} for s in suppliers]
+    return json.dumps(json_response)
 
 @delete('/supplier/:id')
 def deleteSupplier(id,db):
+    isValidUser(db,request)
     try:
         supplier = db.query(Supplier).filter_by(id=id).first()
         db.delete(supplier)
@@ -180,12 +240,14 @@ def deleteSupplier(id,db):
 @put('/sector')
 @post('/sector')
 def addSector(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     sector = Sector(json_input.get('name'),json_input.get('parent'))
     db.add(sector) 
 
 @post('/sector/:id')
 def updateSector(id, db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         sector = db.query(Sector).filter_by(id=id).first()
@@ -197,6 +259,7 @@ def updateSector(id, db):
 
 @get('/sector/:id')
 def getSector(id, db):
+    isValidUser(db,request)
     try:
         sector = db.query(Sector).filter_by(id=id).first()
         if sector.parent:
@@ -211,6 +274,7 @@ def getSector(id, db):
 
 @get('/sectors')
 def getSectors(db):
+    isValidUser(db,request)
     sectors = db.query(Sector)
     json_response = [
             {'id': s.id,
@@ -220,6 +284,7 @@ def getSectors(db):
 
 @delete('/sector/:id')
 def deleteSector(id, db):
+    isValidUser(db,request)
     try:
         sector = db.query(Sector).filter_by(id=id).first()
         db.delete(sector)
@@ -229,6 +294,7 @@ def deleteSector(id, db):
 @put('/person')
 @post('/person')
 def addPerson(db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         person  = Person(title=json_input.get('title'),
@@ -240,6 +306,7 @@ def addPerson(db):
 
 @post('/person/:id')
 def updatePerson(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         person = db.query(Person).filter_by(id=id).first()
@@ -254,6 +321,7 @@ def updatePerson(id,db):
 
 @get('/person/:id')
 def getPerson(id,db):
+    isValidUser(db,request)
     try:
         person = db.query(Person).filter_by(id=id).first()
         return { 'id': person.id,
@@ -267,6 +335,7 @@ def getPerson(id,db):
 
 @get('/personByCustomer/:id')
 def getPersonByCustomer(id,db):
+    isValidUser(db,request)
     try:
         person = db.query(Person).filter_by(customer=id).first()
         return { 'id': person.id,
@@ -280,6 +349,7 @@ def getPersonByCustomer(id,db):
 
 @delete('/person/:id')
 def deletePerson(id,db):
+    isValidUser(db,request)
     try:
         person = db.query(Person).filter_by(id=id).first()
         db.delete(person)
@@ -288,6 +358,7 @@ def deletePerson(id,db):
 
 @get('/persons')
 def getPersons(db):
+    isValidUser(db,request)
     persons= db.query(Person)
     json_response = [ { 'id': person.id } for person in persons]
     return json.dumps(json_response)
@@ -295,6 +366,7 @@ def getPersons(db):
 @put('/customer')
 @post('/customer')
 def addCustomer(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     customer = Customer(name=json_input.get('name'),vat=json_input.get('vat'),
             iban=json_input.get('iban'),remark=json_input.get('remark'),
@@ -303,6 +375,7 @@ def addCustomer(db):
 
 @post('/customer/:id')
 def updateCustomer(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         customer = db.query(Customer).filter_by(id=id).first()
@@ -318,6 +391,7 @@ def updateCustomer(id,db):
 
 @get('/customer/:id')
 def getCustomer(id,db):
+    isValidUser(db,request)
     try:
         customer = db.query(Customer).filter_by(id=id).first()
         return {'id': customer.id,
@@ -332,6 +406,7 @@ def getCustomer(id,db):
 
 @delete('/customer/:id')
 def deleteCustomer(id,db):
+    isValidUser(db,request)
     try:
         customer = db.query(Customer).filter_by(id=id).first()
         db.delete(customer)
@@ -340,11 +415,13 @@ def deleteCustomer(id,db):
 
 @get('/customers')
 def getCustomers(db):
+    isValidUser(db,request)
     customers = db.query(Customer)
     return json.dumps([{'id' : cust.id } for cust in customers])
 
 @get('/customersBySector/:id')
 def getCustomersBySector(id,db):
+    isValidUser(db,request)
     try:
         customers = db.query(Customer).filter(or_ (Customer.sector==id,
                 Customer.subsector==id))
@@ -355,6 +432,7 @@ def getCustomersBySector(id,db):
 @put('/address')
 @post('/address')
 def addAddress(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     address = Address(customer=json_input.get('customer'),address=json_input.get('address'),
             address_type=json_input.get('address_type'),zipcode=json_input.get('zipcode'),
@@ -364,6 +442,7 @@ def addAddress(db):
 
 @post('/address/:id')
 def updateAddress(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         address = db.query(Address).filter_by(id=id).first()
@@ -381,6 +460,7 @@ def updateAddress(id,db):
 
 @get('/address/:id')
 def getAddress(id,db):
+    isValidUser(db,request)
     try:
         address = db.query(Address).filter_by(id=id).first()
         return {'id': address.id,
@@ -397,12 +477,14 @@ def getAddress(id,db):
 
 @get('/addresss')
 def getAddresses(db):
+    isValidUser(db,request)
     addresses = db.query(Address)
     json_response = [ {'id': a.id} for a in addresses]
     return json.dumps(json_response)
 
 @delete('/address/:id')
 def deleteAddress(id,db):
+    isValidUser(db,request)
     try:
         address = db.query(Address).filter_by(id=id).first()
         db.delete(address)
@@ -412,12 +494,14 @@ def deleteAddress(id,db):
 
 @get('/articles')
 def getArticles(db):
+    isValidUser(db,request)
     articles = db.query(Article)
     return json.dumps([ {'id': a.id } for a in articles ])
 
 @put('/article')
 @post('/article')
 def addArticle(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     article = Article(article_type=json_input.get('article_type'),
             code=json_input.get('code'), name=json_input.get('name'),
@@ -429,6 +513,7 @@ def addArticle(db):
 
 @post('/article/:id')
 def updateArticle(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         article = db.query(Article).filter_by(id=id).first()
@@ -450,6 +535,7 @@ def updateArticle(id,db):
 
 @get('/articleBySupplier/:supplierId')
 def getArticlesBySupplier(supplierId,db):
+    isValidUser(db,request)
     try:
         articles = db.query(Article).filter_by(supplier=supplierId).all()
         return json.dumps([ {'id': a.id } for a in articles ])
@@ -458,6 +544,7 @@ def getArticlesBySupplier(supplierId,db):
 
 @get('/article/:id')
 def getArticle(id,db):
+    isValidUser(db,request)
     try:
         article = db.query(Article).filter_by(id=id).first()
         return { 'id': article.id,
@@ -478,6 +565,7 @@ def getArticle(id,db):
 
 @delete('/article/:id')
 def deleteArticle(id,db):
+    isValidUser(db,request)
     try:
         article = db.query(Article).filter_by(id=id).first()
         db.delete(article)
@@ -487,12 +575,14 @@ def deleteArticle(id,db):
 @put('/stock')
 @post('/stock')
 def addStock(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     stock = Stock(article=json_input.get('article'),quantity=json_input.get('quantity'))
     db.add(stock)
 
 @post('/stock/:id')
 def updateStock(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         stock = db.query(Stock).filter_by(id=id).first()
@@ -504,6 +594,7 @@ def updateStock(id,db):
 
 @get('/stock/:id')
 def getStock(id,db):
+    isValidUser(db,request)
     try:
         stock = db.query(Stock).filter_by(id=id).first()
         return {'id': stock.id,
@@ -514,6 +605,7 @@ def getStock(id,db):
 
 @delete('/stock/:id')
 def deleteStock(id,db):
+    isValidUser(db,request)
     try:
         stock = db.query(Stock).filter_by(id=id).first()
         db.delte(stock)
@@ -522,6 +614,7 @@ def deleteStock(id,db):
 
 @get('/stocks')
 def getStocks(db):
+    isValidUser(db,request)
     stocks = db.query(Stock)
     json_response = [ {'id': s.id,
         'article': s.article,
@@ -531,6 +624,7 @@ def getStocks(db):
 @put('/invoiceLine')
 @post('/invoiceLine')
 def addInvoiceLine(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     invoice_line = InvoiceLine(article=json_input.get('article'),
             quantity=json_input.get('quantity'),
@@ -542,6 +636,7 @@ def addInvoiceLine(db):
 
 @post('/invoiceLine/:id')
 def updateInvoiceLine(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
@@ -557,6 +652,7 @@ def updateInvoiceLine(id,db):
 
 @get('/invoiceLine/:id')
 def getInvoiceLine(id,db):
+    isValidUser(db,request)
     try:
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
         return {'id': invoice_line.id,
@@ -571,6 +667,7 @@ def getInvoiceLine(id,db):
 
 @get('/invoiceLineByInvoice/:invoice_id')
 def getInvoiceLineByInvoice(invoice_id,db):
+    isValidUser(db,request)
     try:
         invoice_lines = db.query(InvoiceLine).filter_by(invoice=invoice_id)
         return json.dumps([{'id': invoice_line.id} for invoice_line in invoice_lines])
@@ -579,11 +676,13 @@ def getInvoiceLineByInvoice(invoice_id,db):
 
 @get('/invoiceLines')
 def getInvoiceLines(db):
+    isValidUser(db,request)
     invoice_lines = db.query(InvoiceLine)
     return json.dumps([{'id': i.id} for i in invoice_lines])
 
 @delete('/invoiceLine/:id')
 def deleteInvoiceLine(id,db):
+    isValidUser(db,request)
     try:
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
         db.delete(invoice_line)
@@ -593,6 +692,7 @@ def deleteInvoiceLine(id,db):
 @put('/invoice')
 @post('/invoice')
 def addInvoice(db):
+    isValidUser(db,request)
     json_input = get_input_json(request)
     invoice = Invoice(customer=json_input.get('customer'),
             inv_address=json_input.get("inv_address"),
@@ -613,6 +713,7 @@ def addInvoice(db):
 
 @post('/invoice/:id')
 def updateInvoice(id,db):
+    isValidUser(db,request)
     try:
         json_input = get_input_json(request)
         invoice = db.query(Invoice).filter_by(id=id).first()
@@ -636,6 +737,7 @@ def updateInvoice(id,db):
 
 @delete('/invoice/:id')
 def deleteInvoice(id,db):
+    isValidUser(db,request)
     try:
         invoice = db.query(Invoice).filter_by(id=id).first()
         db.delete(invoice)
@@ -644,6 +746,7 @@ def deleteInvoice(id,db):
 
 @get('/invoice/:id')
 def getInvoice(id,db):
+    isValidUser(db,request)
     try:
         invoice = db.query(Invoice).filter_by(id=id).first()
         return {'id': invoice.id,
@@ -666,11 +769,15 @@ def getInvoice(id,db):
 
 @get('/invoices')
 def getInvoices(db):
+    isValidUser(db,request)
     invoices = db.query(Invoice)
     return json.dumps([ {'id': i.id} for i in invoices])
 
 def resource_not_found(resource):
     abort(404, "%s Not Found" %resource)
+
+def forbidden():
+    abort(403, "Please login")
 
 def get_input_json(http_request):
     req = http_request.body.readline()
