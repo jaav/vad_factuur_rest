@@ -70,10 +70,10 @@ def test_Customer():
     sec1 = sec_dicts[0].get('id')
     sec2 = sec_dicts[1].get('id')
     noun = 'customer'
-    noun_dict = dict(name='aName',vat='22.5',iban='2522',remark='aRemark',
+    noun_dict = dict(name='aName',vat='BE-445.157.568',iban='2522',remark='aRemark',
             sector=sec1,subsector=sec2)
     members = ['name', 'vat', 'iban','remark','sector','subsector']
-    up_dict = dict(name='aNameUpd',vat='25.5',iban='2522Upda',remark='aRemarkUped',
+    up_dict = dict(name='aNameUpd',vat='BE-445.157.568Upda',iban='2522Upda',remark='aRemarkUped',
             sector=sec2,subsector=sec1)
     testNounCrudExt(noun,noun_dict,up_dict,members)
     #============================================

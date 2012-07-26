@@ -1,12 +1,13 @@
 import bottle
 import hashlib
+import settings
 from bottle.ext.sqlalchemy import SQLAlchemyPlugin
 from sqlalchemy import create_engine, Column, Integer, BigInteger,Sequence, String, ForeignKey, Float, DateTime
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
-engine = create_engine('mysql://root:@localhost/vad3',echo=True)
+engine = create_engine(settings.database,echo=True)
 
 class ArticleType(Base):
     __tablename__ = 'article_type'
@@ -94,7 +95,7 @@ class Customer(Base):
     __tablename__ = 'customer'
     id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
-    vat = Column(Float)
+    vat = Column(String(20))
     iban = Column(String(100))
     remark = Column(String(100))
     person = relationship("Person")
@@ -144,6 +145,7 @@ class InvoiceLine(Base):
     id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     article = Column(BigInteger, ForeignKey("article.id"))
     quantity = Column(Integer)
+    weight = Column(Float)
     unit_price = Column(Float)
     discount = Column(Float)
     unit_discount = Column(Float)
@@ -192,6 +194,7 @@ class Invoice(Base):
     total = Column(Float)
     vat = Column(Float)
     creation_date = Column(DateTime)
+    invoice_date = Column(DateTime)
     delivery_date = Column(DateTime)
     paid_date = Column(DateTime)
     weight = Column(Float)
