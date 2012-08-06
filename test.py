@@ -128,7 +128,7 @@ def test_Article():
     user2 = userType_dict[1].get('id')
     noun = 'article'
     noun_dict = dict(code='aCode',name='aName',description='aDescription',
-            listPrice='54',weight=54,create_date='11/11/2011',vat='32',
+            listPrice='54',weight=54,create_date='10/10/2011',vat='32',
             article_type=artType1,unit=unit1,creator=user1,supplier=supp1)
     members = ['code','name','description','listPrice','weight','create_date',
             'vat', 'article_type','unit','creator','supplier']
@@ -165,14 +165,14 @@ def test_Invoice():
     noun = 'invoice'
     noun_dict = dict(customer=cust1,inv_address=add1,del_address=add2,code='aCode',
             remark='aRemark',shipping=45.43,total=52.38,vat=1432,
-            creation_date='31/12/2010',delivery_date='08/01/2011',paid_date='01/01/2011',
+            creation_date='31/12/2010',invoice_date='17/01/2011',delivery_date='08/01/2011',paid_date='01/01/2011',
             weight=1.34,status=1,creator=user1)
     members = ['customer','inv_address','del_address','code','remark','shipping','total',
-            'vat','creation_date','delivery_date','paid_date','weight',
+            'vat','creation_date','invoice_date','delivery_date','paid_date','weight',
             'status','creator']
     up_dict = dict(customer=cust2,inv_address=add2,del_address=add1,code='theCode',
             remark='theRemark',shipping=5.43,total=152.38,vat=14.32,
-            creation_date='01/01/2011',delivery_date='31/01/2011',paid_date='02/01/2011',
+            creation_date='01/01/2011',invoice_date='17/01/2011',delivery_date='31/01/2011',paid_date='02/01/2012',
             weight=5.34,status=2,creator=user2)
     testNounCrudExt(noun,noun_dict,up_dict,members)
 

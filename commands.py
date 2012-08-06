@@ -2,6 +2,7 @@ import json
 from time import strptime
 from bottle import get, post, put, delete, request, abort, response
 import hashlib
+import cleaner
 import settings
 from sqlalchemy import or_
 from model import User, Unit, ArticleType, Supplier, Sector, Person, Customer, Address, Article, Stock, InvoiceLine, Invoice
@@ -86,12 +87,17 @@ def check(db,username,password):
         return False
 
 def isValidUser(db,request):
-    username = request.get_cookie("username", settings.cookie_secret)
-    password = request.get_cookie("password", settings.cookie_secret)
+    print request.get_cookie("username")
+    print request.get_cookie("password")
+    print request.get_cookie("username", "unknown", settings.cookie_secret)
+    print request.get_cookie("password", "unknown", settings.cookie_secret)
+    username = request.get_cookie("username", "unknown", settings.cookie_secret)
+    password = request.get_cookie("password", "unknown", settings.cookie_secret)
     if not username or not password:
         forbidden()
     try:
-        user = db.query(User).filter(or_ (User.username==username,User.password_hash==password))
+        user = db.query(User).filter(or_ (User.username==username,User.password_hash==password)).first()
+        print user
         if user:
             return True
         else:
@@ -609,7 +615,7 @@ def deleteStock(id,db):
     isValidUser(db,request)
     try:
         stock = db.query(Stock).filter_by(id=id).first()
-        db.delte(stock)
+        db.delete(stock)
     except:
         resource_not_found("Stock")
 
@@ -785,3 +791,15 @@ def get_input_json(http_request):
     if not req:
         abort(400, 'No data received')
     return json.loads(req)
+
+@get('/initdb')
+def initdb(db):
+  passwd = request.params.get('passwd')
+  if(passwd == 'krishnaorjef'):
+    try:
+      cleaner.clean_all(db)
+      cleaner.add_admin(db)
+    except:
+      return 'Problem while doing db init'
+  else:
+    return 'wrong passwd'
