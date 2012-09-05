@@ -49,7 +49,7 @@ def getUsers(db):
                        'name': user.name,
                        'username': user.username,
                        'role': user.role} for user in users]
-    return json.dumps(json_response)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/user/:id')
 def deleteUser(id, db):
@@ -140,7 +140,7 @@ def getUnits(db):
     units = db.query(Unit)
     json_response = [ {'id': unit.id,
                         'name': unit.name} for unit in units]
-    return json.dumps(json_response)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/unit/:id')
 def deleteUnit(id,db):
@@ -186,7 +186,7 @@ def getArticleTypes(db):
     articleTypes = db.query(ArticleType)
     json_response = [ {'id': a.id,
                         'name': a.name} for a in articleTypes]
-    return json.dumps(json_response)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/articleType/:id')
 def deleteArticleType(id,db):
@@ -233,7 +233,7 @@ def getSuppliers(db):
     json_response = [
             {'id': s.id,
                 'name': s.name} for s in suppliers]
-    return json.dumps(json_response)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/supplier/:id')
 def deleteSupplier(id,db):
@@ -287,7 +287,7 @@ def getSectors(db):
             {'id': s.id,
                 'name': s.name,
                 'parent': s.parent} for s in sectors]
-    return json.dumps(json_response)
+    return json.dumps(json_response, ensure_ascii=False)
 
 @delete('/sector/:id')
 def deleteSector(id, db):
@@ -368,7 +368,7 @@ def getPersons(db):
     isValidUser(db,request)
     persons= db.query(Person)
     json_response = [ { 'id': person.id } for person in persons]
-    return json.dumps(json_response)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @put('/customer')
 @post('/customer')
@@ -401,8 +401,7 @@ def getCustomer(id,db):
     isValidUser(db,request)
     try:
         customer = db.query(Customer).filter_by(id=id).first()
-        address_id = customer.address
-        address = db.query(Address).filter_by(id=address_id).first()
+        address = db.query(Address).filter_by(customer=customer.id).first()
         return {'id': customer.id,
                 'name': customer.name,
                 'vat': customer.vat,
@@ -435,7 +434,7 @@ def deleteCustomer(id,db):
 def getCustomers(db):
     isValidUser(db,request)
     customers = db.query(Customer)
-    return json.dumps([{'id' : cust.id } for cust in customers])
+    return json.dumps([{'id' : cust.id } for cust in customers],ensure_ascii=False)
 
 @get('/customersBySector/:id')
 def getCustomersBySector(id,db):
@@ -443,7 +442,7 @@ def getCustomersBySector(id,db):
     try:
         customers = db.query(Customer).filter(or_ (Customer.sector==id,
                 Customer.subsector==id))
-        return json.dumps([{'id' : cust.id } for cust in customers])
+        return json.dumps([{'id' : cust.id } for cust in customers],ensure_ascii=False)
     except:
         resource_not_found("Customers")
 
@@ -498,7 +497,7 @@ def getAddresses(db):
     isValidUser(db,request)
     addresses = db.query(Address)
     json_response = [ {'id': a.id} for a in addresses]
-    return json.dumps(json_response)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/address/:id')
 def deleteAddress(id,db):
@@ -517,8 +516,7 @@ def getArticles(db):
     #return json.dumps([ {'id': a.id } for a in articles ])
     artsJson = []
     for article in articles:
-        stock_id = article.stock
-        stock = db.query(Stock).filter_by(id=stock_id).first()
+        stock = db.query(Stock).filter_by(id=article.id).first()
         artsJson.append(
                 { 'id': article.id,
                  'article_type': article.article_type,
@@ -534,7 +532,7 @@ def getArticles(db):
                  'stock': {'id': stock.id, 'quantity': stock.quantity},
                  'supplier': article.supplier
                  })
-    return json.dumps(artsJson)
+    return json.dumps(artsJson,ensure_ascii=False)
 
 @put('/article')
 @post('/article')
@@ -576,7 +574,7 @@ def getArticlesBySupplier(supplierId,db):
     isValidUser(db,request)
     try:
         articles = db.query(Article).filter_by(supplier=supplierId).all()
-        return json.dumps([ {'id': a.id } for a in articles ])
+        return json.dumps([ {'id': a.id } for a in articles ],ensure_ascii=False)
     except:
         resource_not_found("Article")
 
@@ -585,8 +583,7 @@ def getArticle(id,db):
     isValidUser(db,request)
     try:
         article = db.query(Article).filter_by(id=id).first()
-        stock_id = article.stock
-        stock = db.query(Stock).filter_by(id=stock_id).first()
+        stock = db.query(Stock).filter_by(id=article.id).first()
         return { 'id': article.id,
                  'article_type': article.article_type,
                  'code': article.code,
@@ -660,7 +657,7 @@ def getStocks(db):
     json_response = [ {'id': s.id,
         'article': s.article,
         'quantity': s.quantity} for s in stocks ]
-    return json.dumps(json_response)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @put('/invoiceLine')
 @post('/invoiceLine')
@@ -711,7 +708,7 @@ def getInvoiceLineByInvoice(invoice_id,db):
     isValidUser(db,request)
     try:
         invoice_lines = db.query(InvoiceLine).filter_by(invoice=invoice_id)
-        return json.dumps([{'id': invoice_line.id} for invoice_line in invoice_lines])
+        return json.dumps([{'id': invoice_line.id} for invoice_line in invoice_lines],ensure_ascii=False)
     except:
         resource_not_found("InvoiceLine")
 
@@ -719,7 +716,7 @@ def getInvoiceLineByInvoice(invoice_id,db):
 def getInvoiceLines(db):
     isValidUser(db,request)
     invoice_lines = db.query(InvoiceLine)
-    return json.dumps([{'id': i.id} for i in invoice_lines])
+    return json.dumps([{'id': i.id} for i in invoice_lines],ensure_ascii=False)
 
 @delete('/invoiceLine/:id')
 def deleteInvoiceLine(id,db):
@@ -812,7 +809,7 @@ def getInvoice(id,db):
 def getInvoices(db):
     isValidUser(db,request)
     invoices = db.query(Invoice)
-    return json.dumps([ {'id': i.id} for i in invoices])
+    return json.dumps([ {'id': i.id} for i in invoices],ensure_ascii=False)
 
 def resource_not_found(resource):
     abort(404, "%s Not Found" %resource)
