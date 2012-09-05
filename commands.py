@@ -401,12 +401,23 @@ def getCustomer(id,db):
     isValidUser(db,request)
     try:
         customer = db.query(Customer).filter_by(id=id).first()
+        address_id = customer.address
+        address = db.query(Address).filter_by(id=address_id).first()
         return {'id': customer.id,
                 'name': customer.name,
                 'vat': customer.vat,
                 'iban': customer.iban,
                 'remark': customer.remark,
                 'sector': customer.sector,
+                'address':  {'id': address.id,
+                    'customer': address.customer,
+                    'address': address.address,
+                    'address_type': address.address_type,
+                    'zipcode': address.zipcode,
+                    'city': address.city,
+                    'tel': address.tel,
+                    'fax': address.fax,
+                    'email': address.email },
                 'subsector': customer.subsector}
     except:
         resource_not_found("Customer")
@@ -503,7 +514,27 @@ def deleteAddress(id,db):
 def getArticles(db):
     isValidUser(db,request)
     articles = db.query(Article)
-    return json.dumps([ {'id': a.id } for a in articles ])
+    #return json.dumps([ {'id': a.id } for a in articles ])
+    artsJson = []
+    for article in articles:
+        stock_id = article.stock
+        stock = db.query(Stock).filter_by(id=stock_id).first()
+        artsJson.append(
+                { 'id': article.id,
+                 'article_type': article.article_type,
+                 'code': article.code,
+                 'name': article.name,
+                 'description': article.description,
+                 'listPrice': article.list_price,
+                 'unit': article.unit,
+                 'weight': article.weight,
+                 'create_date': article.create_date,
+                 'vat': article.vat,
+                 'creator': article.creator,
+                 'stock': {'id': stock.id, 'quantity': stock.quantity},
+                 'supplier': article.supplier
+                 })
+    return json.dumps(artsJson)
 
 @put('/article')
 @post('/article')
@@ -554,6 +585,8 @@ def getArticle(id,db):
     isValidUser(db,request)
     try:
         article = db.query(Article).filter_by(id=id).first()
+        stock_id = article.stock
+        stock = db.query(Stock).filter_by(id=stock_id).first()
         return { 'id': article.id,
                  'article_type': article.article_type,
                  'code': article.code,
@@ -565,6 +598,7 @@ def getArticle(id,db):
                  'create_date': article.create_date,
                  'vat': article.vat,
                  'creator': article.creator,
+                 'stock': {'id': stock.id, 'quantity': stock.quantity},
                  'supplier': article.supplier
                  }
     except:
