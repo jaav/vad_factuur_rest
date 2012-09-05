@@ -516,7 +516,7 @@ def getArticles(db):
     #return json.dumps([ {'id': a.id } for a in articles ])
     artsJson = []
     for article in articles:
-        stock = db.query(Stock).filter_by(id=article.id).first()
+        stock = db.query(Stock).filter_by(article=article.id).first()
         artsJson.append(
                 { 'id': article.id,
                  'article_type': article.article_type,
