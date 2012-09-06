@@ -596,7 +596,6 @@ def getArticle(id,db):
                  'create_date': article.create_date,
                  'vat': article.vat,
                  'creator': article.creator,
-                 'stock': {'id': stock.id, 'quantity': stock.quantity},
                  'supplier': article.supplier
                  }
         if stock:
