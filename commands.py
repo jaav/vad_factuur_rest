@@ -528,7 +528,13 @@ def deleteAddress(id,db):
 @get('/articles')
 def getArticles(db):
     isValidUser(db,request)
+    fromPos = request.params.get('from')
+    quantity = request.params.get('quantity')
     articles = db.query(Article)
+    if fromPos and quantity:
+        if fromPos.isdigit() and quantity.isdigit():
+            fromPos = int(fromPos); quantity = int(quantity)
+            articles = articles[fromPos:fromPos+quantity]
     #return json.dumps([ {'id': a.id } for a in articles ])
     artsJson = []
     for article in articles:
@@ -853,3 +859,4 @@ def initdb(db):
       return 'Problem while doing db init'
   else:
     return 'wrong passwd'
+
