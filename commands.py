@@ -583,7 +583,7 @@ def getArticle(id,db):
     isValidUser(db,request)
     try:
         article = db.query(Article).filter_by(id=id).first()
-        stock = db.query(Stock).filter_by(id=article.id).first()
+        stock = db.query(Stock).filter_by(article=article.id).first()
         return { 'id': article.id,
                  'article_type': article.article_type,
                  'code': article.code,
