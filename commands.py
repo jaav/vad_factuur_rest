@@ -401,23 +401,39 @@ def getCustomer(id,db):
     isValidUser(db,request)
     try:
         customer = db.query(Customer).filter_by(id=id).first()
-        address = db.query(Address).filter_by(customer=customer.id).first()
-        return {'id': customer.id,
+        addresses = db.query(Address).filter_by(customer=customer.id).all()
+        persons = db.query(Person).filter_by(customer=customer.id).all()
+        custDict = {'id': customer.id,
                 'name': customer.name,
                 'vat': customer.vat,
                 'iban': customer.iban,
                 'remark': customer.remark,
                 'sector': customer.sector,
-                'address':  {'id': address.id,
-                    'customer': address.customer,
-                    'address': address.address,
-                    'address_type': address.address_type,
-                    'zipcode': address.zipcode,
-                    'city': address.city,
-                    'tel': address.tel,
-                    'fax': address.fax,
-                    'email': address.email },
                 'subsector': customer.subsector}
+        addressDictList = []
+        personDictList = []
+        for add in addresses:
+            address = {'id': add.id,
+                    'customer': add.customer,
+                    'address': add.address,
+                    'address_type': add.address_type,
+                    'zipcode': add.zipcode,
+                    'city': add.city,
+                    'tel': add.tel,
+                    'fax': add.fax,
+                    'email': add.email }
+            addressDictList.append(address)
+        for person in persons:
+            person =  {'id': person.id,
+                    'title': person.title,
+                    'name': person.name,
+                    'email': person.email,
+                    'mobile': person.mobile,
+                    'customer': person.customer }
+            personDictList.append(person)
+        custDict['person'] = personDictList
+        custDict['address'] = addressDictList
+        return custDict
     except:
         resource_not_found("Customer")
 
