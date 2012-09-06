@@ -517,8 +517,7 @@ def getArticles(db):
     artsJson = []
     for article in articles:
         stock = db.query(Stock).filter_by(article=article.id).first()
-        artsJson.append(
-                { 'id': article.id,
+        artDict = { 'id': article.id,
                  'article_type': article.article_type,
                  'code': article.code,
                  'name': article.name,
@@ -529,9 +528,11 @@ def getArticles(db):
                  'create_date': article.create_date,
                  'vat': article.vat,
                  'creator': article.creator,
-                 'stock': {'id': stock.id, 'quantity': stock.quantity},
                  'supplier': article.supplier
-                 })
+                 }
+        if stock:
+            artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
+        artsJson.append(artDict)
     return json.dumps(artsJson,ensure_ascii=False)
 
 @put('/article')
@@ -584,7 +585,7 @@ def getArticle(id,db):
     try:
         article = db.query(Article).filter_by(id=id).first()
         stock = db.query(Stock).filter_by(article=article.id).first()
-        return { 'id': article.id,
+        artDict = { 'id': article.id,
                  'article_type': article.article_type,
                  'code': article.code,
                  'name': article.name,
@@ -598,6 +599,9 @@ def getArticle(id,db):
                  'stock': {'id': stock.id, 'quantity': stock.quantity},
                  'supplier': article.supplier
                  }
+        if stock:
+            artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
+        return artDict
     except:
         resource_not_found("Article")
 
