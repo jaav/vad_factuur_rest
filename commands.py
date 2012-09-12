@@ -3,6 +3,7 @@ from time import strptime
 from bottle import get, post, put, delete, request, abort, response
 import hashlib
 import cleaner
+import model
 import settings
 from sqlalchemy import or_
 from model import User, Unit, ArticleType, Supplier, Sector, Person, Customer, Address, Article, Stock, InvoiceLine, Invoice
@@ -44,7 +45,7 @@ def getUser(id,db):
 @get('/users')
 def getUsers(db):
     isValidUser(db,request)
-    users = db.query(User)
+    users = db.query(User).order_by('name')
     json_response = [ {'id': user.id,
                        'name': user.name,
                        'username': user.username,
@@ -137,7 +138,7 @@ def getUnit(id,db):
 @get('/units')
 def getUnits(db):
     isValidUser(db,request)
-    units = db.query(Unit)
+    units = db.query(Unit).order_by('name')
     json_response = [ {'id': unit.id,
                         'name': unit.name} for unit in units]
     return json.dumps(json_response,ensure_ascii=False)
@@ -183,7 +184,7 @@ def getArticleType(id,db):
 @get('/articleTypes')
 def getArticleTypes(db):
     isValidUser(db,request)
-    articleTypes = db.query(ArticleType)
+    articleTypes = db.query(ArticleType).order_by('name')
     json_response = [ {'id': a.id,
                         'name': a.name} for a in articleTypes]
     return json.dumps(json_response,ensure_ascii=False)
@@ -229,7 +230,7 @@ def getSupplier(id,db):
 @get('/suppliers')
 def getSuppliers(db):
     isValidUser(db,request)
-    suppliers = db.query(Supplier)
+    suppliers = db.query(Supplier).order_by('name')
     json_response = [
             {'id': s.id,
                 'name': s.name} for s in suppliers]
@@ -282,7 +283,7 @@ def getSector(id, db):
 @get('/sectors')
 def getSectors(db):
     isValidUser(db,request)
-    sectors = db.query(Sector)
+    sectors = db.query(Sector).order_by('name')
     json_response = [
             {'id': s.id,
                 'name': s.name,
@@ -449,8 +450,8 @@ def deleteCustomer(id,db):
 @get('/customers')
 def getCustomers(db):
     isValidUser(db,request)
-    customers = db.query(Customer)
-    return json.dumps([{'id' : cust.id } for cust in customers],ensure_ascii=False)
+    customers = db.query(Customer).order_by('name')
+    return json.dumps([{'id' : cust.id, 'name' : cust.name } for cust in customers],ensure_ascii=False)
 
 @get('/customersBySector/:id')
 def getCustomersBySector(id,db):
@@ -530,7 +531,7 @@ def getArticles(db):
     isValidUser(db,request)
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
-    articles = db.query(Article)
+    articles = db.query(Article).order_by('name')
     if fromPos and quantity:
         if fromPos.isdigit() and quantity.isdigit():
             fromPos = int(fromPos); quantity = int(quantity)
@@ -728,12 +729,12 @@ def getInvoiceLine(id,db):
     except:
         resource_not_found("InvoiceLine")
 
-@get('/invoiceLineByInvoice/:invoice_id')
+@get('/invoiceLinesByInvoice/:invoice_id')
 def getInvoiceLineByInvoice(invoice_id,db):
     isValidUser(db,request)
     try:
         invoice_lines = db.query(InvoiceLine).filter_by(invoice=invoice_id)
-        return json.dumps([{'id': invoice_line.id} for invoice_line in invoice_lines],ensure_ascii=False)
+        return json.dumps([{'id': invoice_line.id, 'article': invoice_line.article, 'quantity': invoice_line.quantity, 'unit_price': invoice_line.unit_price, 'discount': invoice_line.discount, 'unit_discount': invoice_line.unit_discount} for invoice_line in invoice_lines],ensure_ascii=False)
     except:
         resource_not_found("InvoiceLine")
 
@@ -812,6 +813,7 @@ def getInvoice(id,db):
     isValidUser(db,request)
     try:
         invoice = db.query(Invoice).filter_by(id=id).first()
+        test = invoice
         return {'id': invoice.id,
                 'customer': invoice.customer,
                 'inv_address': invoice.inv_address,
@@ -821,20 +823,46 @@ def getInvoice(id,db):
                 'shipping': invoice.shipping,
                 'total': invoice.total,
                 'vat': invoice.vat,
-                'creation_date': invoice.creation_date,
-                'delivery_date': invoice.delivery_date,
-                'paid_date': invoice.paid_date,
+                'creation_date': str(invoice.creation_date),
+                'delivery_date': str(invoice.delivery_date),
+                'paid_date': str(invoice.paid_date),
                 'weight': invoice.weight,
                 'status': invoice.status,
                 'creator': invoice.creator }
     except:
         resource_not_found("Invoice")
 
+#@get('/invoices')
+#def getInvoices(db):
+#    isValidUser(db,request)
+#    invoices = db.query(Invoice)
+#    return json.dumps([ {'id': i.id, } for i in invoices],ensure_ascii=False)
+
 @get('/invoices')
 def getInvoices(db):
     isValidUser(db,request)
-    invoices = db.query(Invoice)
-    return json.dumps([ {'id': i.id} for i in invoices],ensure_ascii=False)
+    fromPos = request.params.get('from')
+    quantity = request.params.get('quantity')
+    invoices = db.query(Invoice).order_by(  model.Invoice.id.desc())
+    if fromPos and quantity:
+        if fromPos.isdigit() and quantity.isdigit():
+            fromPos = int(fromPos); quantity = int(quantity)
+            invoices = invoices[fromPos:fromPos+quantity]
+    invoicesJson = []
+    for invoice in invoices:
+        customer = db.query(Customer).filter_by(id=invoice.customer).first()
+        invDict = { 'id': invoice.id,
+                 'code': invoice.code,
+                 'total': invoice.total,
+                 'status': invoice.status,
+                 'shipping': invoice.shipping,
+                 'remark': invoice.remark,
+                 'delivery_date': str(invoice.delivery_date),
+                 }
+        if customer:
+            invDict['customer'] = {'id': customer.id, 'name': customer.name}
+        invoicesJson.append(invDict)
+    return json.dumps(invoicesJson,ensure_ascii=False)
 
 def resource_not_found(resource):
     abort(404, "%s Not Found" %resource)
