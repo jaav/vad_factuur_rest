@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 from time import strptime
 from bottle import get, post, put, delete, request, abort, response
@@ -567,7 +568,7 @@ def addArticle(db):
             code=json_input.get('code'), name=json_input.get('name'),
             description=json_input.get('description'),list_price=json_input.get('listPrice'),
             unit=json_input.get('unit'),supplier=json_input.get('supplier'),
-            weight=json_input.get('weight'), create_date=strptime(json_input.get('create_date'),"%d/%m/%Y"),
+            weight=json_input.get('weight'), create_date=datetime.now(),
             vat=json_input.get('vat'),creator=json_input.get('creator'))
     db.add(article)
 
