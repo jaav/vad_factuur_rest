@@ -454,7 +454,8 @@ def getCustomers(db):
     isValidUser(db,request)
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
-    customers = db.query(Customer).order_by('name')
+    orderOn = request.params.get('orderOn')
+    customers = db.query(Customer).order_by(orderOn)
     if fromPos and quantity:
         if fromPos.isdigit() and quantity.isdigit():
             fromPos = int(fromPos); quantity = int(quantity)
