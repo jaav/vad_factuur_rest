@@ -1,6 +1,6 @@
 from datetime import datetime
 import json
-from time import strptime
+from datetime import datetime
 from bottle import get, post, put, delete, request, abort, response
 import hashlib
 import cleaner
@@ -285,7 +285,17 @@ def getSector(id, db):
 @get('/sectors')
 def getSectors(db):
     isValidUser(db,request)
-    sectors = db.query(Sector).order_by('name')
+    sectors = db.query(Sector).filter_by(parent=None).order_by('name')
+    json_response = [
+            {'id': s.id,
+                'name': s.name,
+                'parent': s.parent} for s in sectors]
+    return json.dumps(json_response, ensure_ascii=False)
+
+@get('/subSectors/:parent_id')
+def getSectors(parent_id, db):
+    isValidUser(db,request)
+    sectors = db.query(Sector).filter_by(parent=parent_id).order_by('name')
     json_response = [
             {'id': s.id,
                 'name': s.name,
@@ -557,8 +567,8 @@ def getArticles(db):
                  'listPrice': article.list_price,
                  'unit': article.unit,
                  'weight': article.weight,
-                 'create_date': article.create_date,
-                 'vat': article.vat,
+                 'create_date': str(article.create_date),
+                 'vat': str(article.vat),
                  'creator': article.creator,
                  'supplier': article.supplier
                  }
@@ -593,7 +603,7 @@ def updateArticle(id,db):
         if json_input.get('listPrice'): article.list_price=json_input.get('listPrice')
         if json_input.get('unit'): article.unit=json_input.get('unit')
         if json_input.get('weight'): article.weight=json_input.get('weight')
-        if json_input.get('create_date'): article.create_date=strptime(json_input.get('create_date'), "%d/%m/%Y")
+        if json_input.get('create_date'): article.create_date=datetime.strptime(json_input.get('create_date'), "%d/%m/%Y")
         if json_input.get('vat'): article.vat=json_input.get('vat')
         if json_input.get('creator'): article.creator=json_input.get('creator')
         if json_input.get('supplier'): article.supplier=json_input.get('supplier')
@@ -625,7 +635,7 @@ def getArticle(id,db):
                  'listPrice': article.list_price,
                  'unit': article.unit,
                  'weight': article.weight,
-                 'create_date': article.create_date,
+                 'create_date': str(article.create_date),
                  'vat': article.vat,
                  'creator': article.creator,
                  'supplier': article.supplier
@@ -702,9 +712,8 @@ def addInvoiceLine(db):
     invoice_line = InvoiceLine(article=json_input.get('article'),
             quantity=json_input.get('quantity'),
             unit_price=json_input.get('unit_price'),
-            discount=json_input.get('discount'),
             unit_discount=json_input.get('unit_discount'),
-            invoice=json_input.get('invoice'))
+            invoice=json_input.get('order_id'))
     db.add(invoice_line)
 
 @post('/invoiceLine/:id')
@@ -716,7 +725,6 @@ def updateInvoiceLine(id,db):
         if json_input.get('article'): invoice_line.article=json_input.get('article')
         if json_input.get('quantity'): invoice_line.quantity=json_input.get('quantity')
         if json_input.get('unit_price'): invoice_line.unit_price=json_input.get('unit_price')
-        if json_input.get('discount'): invoice_line.discount=json_input.get('discount')
         if json_input.get('unit_discount'): invoice_line.unit_discount=json_input.get('unit_discount')
         if json_input.get('invoice'): invoice_line.invoice=json_input.get('invoice')
         db.merge(invoice_line)
@@ -732,7 +740,6 @@ def getInvoiceLine(id,db):
                 'article': invoice_line.article,
                 'quantity': invoice_line.quantity,
                 'unit_price': invoice_line.unit_price,
-                'discount': invoice_line.discount,
                 'unit_discount': invoice_line.unit_discount,
                 'invoice': invoice_line.invoice }
     except:
@@ -743,7 +750,7 @@ def getInvoiceLineByInvoice(invoice_id,db):
     isValidUser(db,request)
     try:
         invoice_lines = db.query(InvoiceLine).filter_by(invoice=invoice_id)
-        return json.dumps([{'id': invoice_line.id, 'article': invoice_line.article, 'quantity': invoice_line.quantity, 'unit_price': invoice_line.unit_price, 'discount': invoice_line.discount, 'unit_discount': invoice_line.unit_discount} for invoice_line in invoice_lines],ensure_ascii=False)
+        return json.dumps([{'id': invoice_line.id, 'article': invoice_line.article, 'quantity': invoice_line.quantity, 'unit_price': invoice_line.unit_price, 'unit_discount': invoice_line.unit_discount} for invoice_line in invoice_lines],ensure_ascii=False)
     except:
         resource_not_found("InvoiceLine")
 
@@ -775,9 +782,9 @@ def addInvoice(db):
             shipping=json_input.get("shipping"),
             total=json_input.get("total"),
             vat=json_input.get("vat"),
-            creation_date=strptime(json_input.get("creation_date"),"%d/%m/%Y"),
-            delivery_date=strptime(json_input.get("delivery_date"),"%d/%m/%Y"),
-            paid_date=strptime(json_input.get("paid_date"),"%d/%m/%Y"),
+            date=datetime.strptime(json_input.get("creation_date"),"%d/%m/%Y"),
+            delivery_date=datetime.strptime(json_input.get("delivery_date"),"%d/%m/%Y"),
+            paid_date=datetime.strptime(json_input.get("paid_date"),"%d/%m/%Y"),
             weight=json_input.get("weight"),
             status=json_input.get("status"),
             creator=json_input.get("creator"),
@@ -790,7 +797,10 @@ def updateInvoice(id,db):
     try:
         json_input = get_input_json(request)
         invoice = db.query(Invoice).filter_by(id=id).first()
-        if json_input.get('customer'):invoice.customer=json_input.get('customer')
+        if json_input.get('customer'):
+          customer_id = json_input.get('customer').get('id')
+          if customer_id:
+            invoice.customer=customer_id
         if json_input.get("inv_address"):invoice.inv_address=json_input.get("inv_address")
         if json_input.get("del_address"):invoice.del_address=json_input.get("del_address")
         if json_input.get("code"):invoice.code=json_input.get("code")
@@ -798,9 +808,9 @@ def updateInvoice(id,db):
         if json_input.get("shipping"):invoice.shipping=json_input.get("shipping")
         if json_input.get("total"):invoice.total=json_input.get("total")
         if json_input.get("vat"):invoice.vat=json_input.get("vat")
-        if json_input.get("creation_date"):invoice.creation_date=strptime(json_input.get("creation_date"),"%d/%m/%Y")
-        if json_input.get("delivery_date"):invoice.delivery_date=strptime(json_input.get("delivery_date"),"%d/%m/%Y")
-        if json_input.get("paid_date"):invoice.paid_date=strptime(json_input.get("paid_date"),"%d/%m/%Y")
+        if json_input.get("creation_date"):invoice.creation_date=datetime.strptime(json_input.get("creation_date"),"%d/%m/%Y")
+        if json_input.get("delivery_date"):invoice.delivery_date=datetime.strptime(json_input.get("delivery_date"),"%d/%m/%Y")
+        if json_input.get("paid_date"):invoice.paid_date=datetime.strptime(json_input.get("paid_date"),"%d/%m/%Y")
         if json_input.get("weight"):invoice.weight=json_input.get("weight")
         if json_input.get("status"):invoice.status=json_input.get("status")
         if json_input.get("creator"):invoice.creator=json_input.get("creator")
@@ -852,7 +862,7 @@ def getInvoices(db):
     isValidUser(db,request)
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
-    invoices = db.query(Invoice).order_by(  model.Invoice.id.desc())
+    invoices = db.query(Invoice).order_by( model.Invoice.creation_date.desc())
     if fromPos and quantity:
         if fromPos.isdigit() and quantity.isdigit():
             fromPos = int(fromPos); quantity = int(quantity)
@@ -867,6 +877,7 @@ def getInvoices(db):
                  'shipping': invoice.shipping,
                  'remark': invoice.remark,
                  'delivery_date': str(invoice.delivery_date),
+                 'creation_date': str(invoice.creation_date)
                  }
         if customer:
             invDict['customer'] = {'id': customer.id, 'name': customer.name}

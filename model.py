@@ -147,15 +147,13 @@ class InvoiceLine(Base):
     quantity = Column(Integer)
     weight = Column(Float)
     unit_price = Column(Float)
-    discount = Column(Float)
     unit_discount = Column(Float)
     invoice = Column(BigInteger, ForeignKey("invoice.id"))
 
-    def __init(self, article, quantity, unit_price, discount, unit_discount, invoice):
+    def __init(self, article, quantity, unit_price, unit_discount, invoice):
         self. article = article
         self.quantity = quantity
         self.unit_price = unit_price
-        self.discount = discount
         self.unit_discount = unit_discount
         self.invoice = invoice
 
