@@ -465,12 +465,26 @@ def getCustomers(db):
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
     orderOn = request.params.get('orderOn')
+    full_info = request.params.get('fullInfo')
     customers = db.query(Customer).order_by(orderOn)
     if fromPos and quantity:
         if fromPos.isdigit() and quantity.isdigit():
             fromPos = int(fromPos); quantity = int(quantity)
             customers = customers[fromPos:fromPos+quantity]
-    return json.dumps([{'id' : cust.id, 'name' : cust.name } for cust in customers],ensure_ascii=False)
+    if full_info:
+      customersJson = []
+      for customer in customers:
+          custDict = { 'id': customer.id,
+                       'name': customer.name,
+                       'vat': customer.vat,
+                       'iban': customer.iban,
+                       'remark': customer.remark,
+                       'sector': customer.sector,
+                       'subsector': customer.subsector }
+          customersJson.append(custDict)
+      return json.dumps(customersJson,ensure_ascii=False)
+    else:
+      return json.dumps([{'id' : cust.id, 'name' : cust.name } for cust in customers],ensure_ascii=False)
 
 @get('/customersBySector/:id')
 def getCustomersBySector(id,db):
@@ -551,30 +565,36 @@ def getArticles(db):
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
     articles = db.query(Article).order_by('name')
+    full_info = request.params.get('fullInfo')
     if fromPos and quantity:
         if fromPos.isdigit() and quantity.isdigit():
             fromPos = int(fromPos); quantity = int(quantity)
             articles = articles[fromPos:fromPos+quantity]
     #return json.dumps([ {'id': a.id } for a in articles ])
     artsJson = []
-    for article in articles:
-        stock = db.query(Stock).filter_by(article=article.id).first()
-        artDict = { 'id': article.id,
-                 'article_type': article.article_type,
-                 'code': article.code,
-                 'name': article.name,
-                 'description': article.description,
-                 'listPrice': article.list_price,
-                 'unit': article.unit,
-                 'weight': article.weight,
-                 'create_date': str(article.create_date),
-                 'vat': str(article.vat),
-                 'creator': article.creator,
-                 'supplier': article.supplier
-                 }
-        if stock:
-            artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
-        artsJson.append(artDict)
+    if full_info:
+      for article in articles:
+          stock = db.query(Stock).filter_by(article=article.id).first()
+          artDict = { 'id': article.id,
+                   'article_type': article.article_type,
+                   'code': article.code,
+                   'name': article.name,
+                   'description': article.description,
+                   'listPrice': article.list_price,
+                   'unit': article.unit,
+                   'weight': article.weight,
+                   'create_date': str(article.create_date),
+                   'vat': str(article.vat),
+                   'creator': article.creator,
+                   'supplier': article.supplier
+                   }
+          if stock:
+              artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
+          artsJson.append(artDict)
+    else:
+      for article in articles:
+          artDict = { 'id': article.id,'name': article.name}
+          artsJson.append(artDict)
     return json.dumps(artsJson,ensure_ascii=False)
 
 @put('/article')
@@ -862,26 +882,32 @@ def getInvoices(db):
     isValidUser(db,request)
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
+    full_info = request.params.get('fullInfo')
     invoices = db.query(Invoice).order_by( model.Invoice.creation_date.desc())
     if fromPos and quantity:
         if fromPos.isdigit() and quantity.isdigit():
             fromPos = int(fromPos); quantity = int(quantity)
             invoices = invoices[fromPos:fromPos+quantity]
     invoicesJson = []
-    for invoice in invoices:
-        customer = db.query(Customer).filter_by(id=invoice.customer).first()
-        invDict = { 'id': invoice.id,
-                 'code': invoice.code,
-                 'total': invoice.total,
-                 'status': invoice.status,
-                 'shipping': invoice.shipping,
-                 'remark': invoice.remark,
-                 'delivery_date': str(invoice.delivery_date),
-                 'creation_date': str(invoice.creation_date)
-                 }
-        if customer:
-            invDict['customer'] = {'id': customer.id, 'name': customer.name}
-        invoicesJson.append(invDict)
+    if full_info:
+      for invoice in invoices:
+          customer = db.query(Customer).filter_by(id=invoice.customer).first()
+          invDict = { 'id': invoice.id,
+                   'code': invoice.code,
+                   'total': invoice.total,
+                   'status': invoice.status,
+                   'shipping': invoice.shipping,
+                   'remark': invoice.remark,
+                   'delivery_date': str(invoice.delivery_date),
+                   'creation_date': str(invoice.creation_date)
+                   }
+          if customer:
+              invDict['customer'] = {'id': customer.id, 'name': customer.name}
+          invoicesJson.append(invDict)
+    else:
+      for invoice in invoices:
+          invDict = { 'id': invoice.id}
+          invoicesJson.append(invDict)
     return json.dumps(invoicesJson,ensure_ascii=False)
 
 def resource_not_found(resource):
