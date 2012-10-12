@@ -2,18 +2,20 @@ import bottle
 import hashlib
 import settings
 from bottle.ext.sqlalchemy import SQLAlchemyPlugin
-from sqlalchemy import create_engine, Column, Integer, BigInteger,Sequence, String, ForeignKey, Float, DateTime
+from sqlalchemy import create_engine, Column, Integer, BigInteger,Sequence, String, ForeignKey, Float, DateTime, Boolean, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
 engine = create_engine(settings.database,echo=True)
 
+
 class ArticleType(Base):
     __tablename__ = 'article_type'
     id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     article = relationship("Article")
+    active = Column(Boolean)
 
     def __init__(self, name):
         self.name = name
@@ -23,6 +25,7 @@ class Unit(Base):
     id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     article = relationship("Article")
+    active = Column(Boolean)
 
     def __init__(self, name):
         self.name = name
@@ -32,6 +35,7 @@ class Supplier(Base):
     id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     article = relationship("Article")
+    active = Column(Boolean)
 
     def __init__(self, name):
         self.name = name
@@ -44,6 +48,7 @@ class User(Base):
     password_hash = Column(String(200))
     role = Column(Integer)
     article = relationship("Article")
+    active = Column(Boolean)
 
     def __init__(self, name, username, password, role):
         self.name = name
@@ -60,6 +65,7 @@ class Article(Base):
     list_price = Column(Float)
     weight = Column(Integer)
     create_date = Column(DateTime)
+    copy_date = Column(Date)
     vat = Column(Float)
     article_type = Column(BigInteger,ForeignKey("article_type.id"))
     unit = Column(BigInteger, ForeignKey("unit.id"))
@@ -67,6 +73,8 @@ class Article(Base):
     supplier = Column(BigInteger, ForeignKey("supplier.id"))  
     stock = relationship("Stock")
     invoice_line = relationship("InvoiceLine")
+    active = Column(Boolean)
+    free_quantity = Column(Integer)
 
     def __init__(self, code, name, description, list_price, weight, create_date, vat, article_type, unit, creator, supplier):
         self.code = code
@@ -86,6 +94,7 @@ class Stock(Base):
     id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     quantity = Column(Integer)
     article = Column(BigInteger, ForeignKey("article.id"))
+    active = Column(Boolean)
 
     def __init__(self, quantity, article):
         self.quantity = quantity
@@ -104,6 +113,7 @@ class Customer(Base):
     subsector = Column(BigInteger, ForeignKey("sector.id"))
     relationship("sector",primaryjoin="sector.id==customer.sector")
     relationship("sector",primaryjoin="sector.id==customer.subsector")
+    active = Column(Boolean)
 
     def __init__(self, name, vat, iban, remark, sector, subsector):
         self.name = name
@@ -121,6 +131,7 @@ class Person(Base):
     email = Column(String(100))
     mobile = Column(String(100))
     customer = Column(BigInteger, ForeignKey("customer.id"))
+    active = Column(Boolean)
 
     def __init__(self, name, title, email, mobile, customer):
         self.name = name
@@ -135,6 +146,7 @@ class Sector(Base):
     name = Column(String(100))
     parent = Column(BigInteger, ForeignKey("sector.id"))
     children = relationship("Sector")
+    active = Column(Boolean)
 
     def __init__(self, name, parent):
         self.name = name
@@ -149,6 +161,7 @@ class InvoiceLine(Base):
     unit_price = Column(Float)
     unit_discount = Column(Float)
     invoice = Column(BigInteger, ForeignKey("invoice.id"))
+    active = Column(Boolean)
 
     def __init(self, article, quantity, unit_price, unit_discount, invoice):
         self. article = article
@@ -169,6 +182,7 @@ class Address(Base):
     tel = Column(String(20))
     fax = Column(String(20))
     email = Column(String(200))
+    active = Column(Boolean)
 
     def __init__(self, customer, address_type, address, zipcode, city, tel, fax, email):
         self.customer = customer
@@ -201,6 +215,7 @@ class Invoice(Base):
     relationship("address",primaryjoin="address.id==invoice.del_address")
     relationship("address",primaryjoin="address.id==invoice.inv_address")
     invoice_line = relationship("InvoiceLine")
+    active = Column(Boolean)
 
     def __init__(self, customer, inv_address, del_address, code, remark, shipping, total, vat, creation_date, delivery_date, paid_date, weight, status, creator):
         self.customer = customer
@@ -221,3 +236,21 @@ class Invoice(Base):
 
 bottle.install(SQLAlchemyPlugin(engine, Base.metadata, create=True))
 Base.metadata.create_all(engine)
+
+
+
+#ALTER TABLE address ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE article ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE article_type ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE customer ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE invoice ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE invoice_line ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE person ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE sector ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE stock ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE supplier ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE unit ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#ALTER TABLE user ADD COLUMN active BOOL DEFAULT true NOT NULL;
+#
+#ALTER TABLE article ADD COLUMN free_quantity INT DEFAULT 0 NOT NULL;
+#ALTER TABLE article ADD COLUMN copy_date DATE AFTER create_date;

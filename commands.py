@@ -6,7 +6,7 @@ import hashlib
 import cleaner
 import model
 import settings
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from model import User, Unit, ArticleType, Supplier, Sector, Person, Customer, Address, Article, Stock, InvoiceLine, Invoice
 
 @put('/user')
@@ -46,7 +46,11 @@ def getUser(id,db):
 @get('/users')
 def getUsers(db):
     isValidUser(db,request)
-    users = db.query(User).order_by('name')
+    orderOn = request.params.get('orderOn')
+    if orderOn == None:
+      users = db.query(User).filter_by(active=1).order_by('name')
+    else:
+      users = db.query(User).filter_by(active=1).order_by(orderOn)
     json_response = [ {'id': user.id,
                        'name': user.name,
                        'username': user.username,
@@ -58,7 +62,7 @@ def deleteUser(id, db):
     isValidUser(db,request)
     try:
         user = db.query(User).filter_by(id=id).first()
-        db.delete(user)
+        soft_delete(db, user)
     except:
         resource_not_found( 'User')
 
@@ -150,7 +154,7 @@ def deleteUnit(id,db):
     isValidUser(db,request)
     try:
         unit = db.query(Unit).filter_by(id=id).first()
-        db.delete(unit)
+        soft_delete(db, unit)
     except:
         resource_not_found("Unit")
 
@@ -186,7 +190,11 @@ def getArticleType(id,db):
 @get('/articleTypes')
 def getArticleTypes(db):
     isValidUser(db,request)
-    articleTypes = db.query(ArticleType).order_by('name')
+    orderOn = request.params.get('orderOn')
+    if orderOn == None:
+      articleTypes = db.query(ArticleType).filter_by(active=1).order_by('name')
+    else:
+      articleTypes = db.query(ArticleType).filter_by(active=1).order_by(orderOn)
     json_response = [ {'id': a.id,
                         'name': a.name} for a in articleTypes]
     return json.dumps(json_response,ensure_ascii=False)
@@ -195,8 +203,9 @@ def getArticleTypes(db):
 def deleteArticleType(id,db):
     isValidUser(db,request)
     try:
-        articleType = db.query(ArticleType).filter_by(id=id).first()
-        db.delete(articleType)
+      articleType = db.query(ArticleType).filter_by(id=id).first()
+      soft_delete(db, articleType)
+#        db.delete(articleType)
     except:
         resource_not_found("ArticleType")
 
@@ -232,7 +241,11 @@ def getSupplier(id,db):
 @get('/suppliers')
 def getSuppliers(db):
     isValidUser(db,request)
-    suppliers = db.query(Supplier).order_by('name')
+    orderOn = request.params.get('orderOn')
+    if orderOn == None:
+      suppliers = db.query(Supplier).filter_by(active=1).order_by('name')
+    else:
+      suppliers = db.query(Supplier).filter_by(active=1).order_by(orderOn)
     json_response = [
             {'id': s.id,
                 'name': s.name} for s in suppliers]
@@ -243,7 +256,7 @@ def deleteSupplier(id,db):
     isValidUser(db,request)
     try:
         supplier = db.query(Supplier).filter_by(id=id).first()
-        db.delete(supplier)
+        soft_delete(db, supplier)
     except:
         resource_not_found("Supplier")
 
@@ -285,7 +298,11 @@ def getSector(id, db):
 @get('/sectors')
 def getSectors(db):
     isValidUser(db,request)
-    sectors = db.query(Sector).filter_by(parent=None).order_by('name')
+    orderOn = request.params.get('orderOn')
+    if orderOn == None:
+      sectors = db.query(Sector).filter_by(active=1).order_by('name')
+    else:
+      sectors = db.query(Sector).filter_by(active=1).order_by(orderOn)
     json_response = [
             {'id': s.id,
                 'name': s.name,
@@ -295,7 +312,11 @@ def getSectors(db):
 @get('/subSectors/:parent_id')
 def getSectors(parent_id, db):
     isValidUser(db,request)
-    sectors = db.query(Sector).filter_by(parent=parent_id).order_by('name')
+    orderOn = request.params.get('orderOn')
+    if orderOn == None:
+      sectors = db.query(Sector).filter(and_(Sector.active==1,Sector.parent==id)).order_by('name')
+    else:
+      sectors = db.query(Sector).filter(and_(Sector.active==1,Sector.parent==id)).order_by(orderOn)
     json_response = [
             {'id': s.id,
                 'name': s.name,
@@ -307,7 +328,7 @@ def deleteSector(id, db):
     isValidUser(db,request)
     try:
         sector = db.query(Sector).filter_by(id=id).first()
-        db.delete(sector)
+        soft_delete(db, sector)
     except:
         resource_not_found("Sector")
 
@@ -357,7 +378,11 @@ def getPerson(id,db):
 def getPersonByCustomer(id,db):
     isValidUser(db,request)
     try:
-        person = db.query(Person).filter_by(customer=id).first()
+        orderOn = request.params.get('orderOn')
+        if orderOn == None:
+          person = db.query(Person).filter(and_(Person.active==1, Person.customer==id)).order_by('id').first()
+        else:
+          person = db.query(Person).filter(and_(Person.active==1, Person.customer==id)).order_by(orderOn).first()
         return { 'id': person.id,
                 'title': person.title,
                 'name': person.name,
@@ -372,14 +397,18 @@ def deletePerson(id,db):
     isValidUser(db,request)
     try:
         person = db.query(Person).filter_by(id=id).first()
-        db.delete(person)
+        soft_delete(db, person)
     except:
         resource_not_found("Person")
 
 @get('/persons')
 def getPersons(db):
     isValidUser(db,request)
-    persons= db.query(Person)
+    orderOn = request.params.get('orderOn')
+    if orderOn == None:
+      persons = db.query(Person).filter_by(active=1).order_by('name')
+    else:
+      persons = db.query(Person).filter_by(active=1).order_by(orderOn)
     json_response = [ { 'id': person.id } for person in persons]
     return json.dumps(json_response,ensure_ascii=False)
 
@@ -455,7 +484,7 @@ def deleteCustomer(id,db):
     isValidUser(db,request)
     try:
         customer = db.query(Customer).filter_by(id=id).first()
-        db.delete(customer)
+        soft_delete(db, customer)
     except:
         resource_not_found("Customer")
 
@@ -464,13 +493,20 @@ def getCustomers(db):
     isValidUser(db,request)
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
+    paging = False
+    if fromPos and quantity:
+      paging=True
     orderOn = request.params.get('orderOn')
     full_info = request.params.get('fullInfo')
-    customers = db.query(Customer).order_by(orderOn)
-    if fromPos and quantity:
-        if fromPos.isdigit() and quantity.isdigit():
-            fromPos = int(fromPos); quantity = int(quantity)
-            customers = customers[fromPos:fromPos+quantity]
+    orderOn = request.params.get('orderOn')
+    if orderOn and paging:
+      customers = db.query(Customer).filter_by(active=1).order_by(orderOn).offset(fromPos).limit(quantity)
+    elif orderOn==None and not paging:
+      customers = db.query(Customer).filter_by(active=1).order_by('name')
+    elif orderOn:
+      customers = db.query(Customer).filter_by(active=1).order_by(orderOn)
+    else:
+      customers = db.query(Customer).filter_by(active=1).order_by('name').offset(fromPos).limit(quantity)
     if full_info:
       customersJson = []
       for customer in customers:
@@ -545,7 +581,11 @@ def getAddress(id,db):
 @get('/addresss')
 def getAddresses(db):
     isValidUser(db,request)
-    addresses = db.query(Address)
+    orderOn = request.params.get('orderOn')
+    if orderOn == None:
+      addresses = db.query(Address).filter_by(active=1).order_by('address')
+    else:
+      addresses = db.query(Address).filter_by(active=1).order_by(orderOn)
     json_response = [ {'id': a.id} for a in addresses]
     return json.dumps(json_response,ensure_ascii=False)
 
@@ -554,7 +594,7 @@ def deleteAddress(id,db):
     isValidUser(db,request)
     try:
         address = db.query(Address).filter_by(id=id).first()
-        db.delete(address)
+        soft_delete(db, address)
     except:
         resource_not_found('Address')
 
@@ -564,13 +604,19 @@ def getArticles(db):
     isValidUser(db,request)
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
-    articles = db.query(Article).order_by('name')
     full_info = request.params.get('fullInfo')
+    paging = False
     if fromPos and quantity:
-        if fromPos.isdigit() and quantity.isdigit():
-            fromPos = int(fromPos); quantity = int(quantity)
-            articles = articles[fromPos:fromPos+quantity]
-    #return json.dumps([ {'id': a.id } for a in articles ])
+      paging=True
+    orderOn = request.params.get('orderOn')
+    if orderOn and paging:
+      articles = db.query(Article).filter_by(active=1).order_by(orderOn).offset(fromPos).limit(quantity)
+    elif orderOn==None and not paging:
+      articles = db.query(Article).filter_by(active=1).order_by('name')
+    elif orderOn:
+      articles = db.query(Article).filter_by(active=1).order_by(orderOn)
+    else:
+      articles = db.query(Article).filter_by(active=1).order_by('name').offset(fromPos).limit(quantity)
     artsJson = []
     if full_info:
       for article in articles:
@@ -581,6 +627,7 @@ def getArticles(db):
                    'name': article.name,
                    'description': article.description,
                    'listPrice': article.list_price,
+                   'freeQuantity': article.free_quantity,
                    'unit': article.unit,
                    'weight': article.weight,
                    'create_date': str(article.create_date),
@@ -605,6 +652,7 @@ def addArticle(db):
     article = Article(article_type=json_input.get('article_type'),
             code=json_input.get('code'), name=json_input.get('name'),
             description=json_input.get('description'),list_price=json_input.get('listPrice'),
+            free_quantity=json_input.get('freeQuantity'),
             unit=json_input.get('unit'),supplier=json_input.get('supplier'),
             weight=json_input.get('weight'), create_date=datetime.now(),
             vat=json_input.get('vat'),creator=json_input.get('creator'))
@@ -621,6 +669,7 @@ def updateArticle(id,db):
         if json_input.get('name'): article.name=json_input.get('name')
         if json_input.get('description'): article.description=json_input.get('description')
         if json_input.get('listPrice'): article.list_price=json_input.get('listPrice')
+        if json_input.get('freeQuantity'): article.free_quantity=json_input.get('freeQuantity')
         if json_input.get('unit'): article.unit=json_input.get('unit')
         if json_input.get('weight'): article.weight=json_input.get('weight')
         if json_input.get('create_date'): article.create_date=datetime.strptime(json_input.get('create_date'), "%d/%m/%Y")
@@ -653,6 +702,7 @@ def getArticle(id,db):
                  'name': article.name,
                  'description': article.description,
                  'listPrice': article.list_price,
+                 'freeQuantity': article.free_quantity,
                  'unit': article.unit,
                  'weight': article.weight,
                  'create_date': str(article.create_date),
@@ -671,7 +721,7 @@ def deleteArticle(id,db):
     isValidUser(db,request)
     try:
         article = db.query(Article).filter_by(id=id).first()
-        db.delete(article)
+        soft_delete(db, article)
     except:
         resource_not_found('Article')
 
@@ -699,7 +749,7 @@ def updateStock(id,db):
 def getStock(id,db):
     isValidUser(db,request)
     try:
-        stock = db.query(Stock).filter_by(id=id).first()
+        stock = db.query(Stock).filter(and_(Stock.id==id, Stock.active==1)).first()
         return {'id': stock.id,
                 'article': stock.article,
                 'quantity': stock.quantity }
@@ -718,7 +768,7 @@ def deleteStock(id,db):
 @get('/stocks')
 def getStocks(db):
     isValidUser(db,request)
-    stocks = db.query(Stock)
+    stocks = db.query(Stock).filter_by(active=1)
     json_response = [ {'id': s.id,
         'article': s.article,
         'quantity': s.quantity} for s in stocks ]
@@ -769,7 +819,7 @@ def getInvoiceLine(id,db):
 def getInvoiceLineByInvoice(invoice_id,db):
     isValidUser(db,request)
     try:
-        invoice_lines = db.query(InvoiceLine).filter_by(invoice=invoice_id)
+        invoice_lines = db.query(InvoiceLine).filter(and_(InvoiceLine.invoice==invoice_id, InvoiceLine.active==1)).order_by('id')
         return json.dumps([{'id': invoice_line.id, 'article': invoice_line.article, 'quantity': invoice_line.quantity, 'unit_price': invoice_line.unit_price, 'unit_discount': invoice_line.unit_discount} for invoice_line in invoice_lines],ensure_ascii=False)
     except:
         resource_not_found("InvoiceLine")
@@ -777,7 +827,7 @@ def getInvoiceLineByInvoice(invoice_id,db):
 @get('/invoiceLines')
 def getInvoiceLines(db):
     isValidUser(db,request)
-    invoice_lines = db.query(InvoiceLine)
+    invoice_lines = db.query(InvoiceLine).order_by(InvoiceLine.id.desc())
     return json.dumps([{'id': i.id} for i in invoice_lines],ensure_ascii=False)
 
 @delete('/invoiceLine/:id')
@@ -785,7 +835,7 @@ def deleteInvoiceLine(id,db):
     isValidUser(db,request)
     try:
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
-        db.delete(invoice_line)
+        soft_delete(db, invoice_line)
     except:
         resource_not_found("InvoiceLine")
 
@@ -843,7 +893,7 @@ def deleteInvoice(id,db):
     isValidUser(db,request)
     try:
         invoice = db.query(Invoice).filter_by(id=id).first()
-        db.delete(invoice)
+        soft_delete(db, invoice)
     except:
         resource_not_found("Invoice")
 
@@ -852,9 +902,11 @@ def getInvoice(id,db):
     isValidUser(db,request)
     try:
         invoice = db.query(Invoice).filter_by(id=id).first()
-        test = invoice
+        customer = db.query(Customer).filter_by(id=invoice.customer).first()
+        if customer:
+            customer_json = {'id': customer.id, 'name': customer.name}
         return {'id': invoice.id,
-                'customer': invoice.customer,
+                'customer': customer_json,
                 'inv_address': invoice.inv_address,
                 'del_address': invoice.del_address,
                 'code': invoice.code,
@@ -883,11 +935,21 @@ def getInvoices(db):
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
     full_info = request.params.get('fullInfo')
-    invoices = db.query(Invoice).order_by( model.Invoice.creation_date.desc())
+
+    paging = False
     if fromPos and quantity:
-        if fromPos.isdigit() and quantity.isdigit():
-            fromPos = int(fromPos); quantity = int(quantity)
-            invoices = invoices[fromPos:fromPos+quantity]
+      paging=True
+    orderOn = request.params.get('orderOn')
+    if orderOn and paging:
+      invoices = db.query(Invoice).filter_by(active=1).order_by(orderOn).offset(fromPos).limit(quantity)
+    elif orderOn==None and not paging:
+      invoices = db.query(Invoice).filter_by(active=1).order_by('id')
+    elif orderOn:
+      invoices = db.query(Invoice).filter_by(active=1).order_by(orderOn)
+    else:
+      invoices = db.query(Invoice).filter_by(active=1).order_by('id').offset(fromPos).limit(quantity)
+
+
     invoicesJson = []
     if full_info:
       for invoice in invoices:
@@ -921,6 +983,10 @@ def get_input_json(http_request):
     if not req:
         abort(400, 'No data received')
     return json.loads(req)
+
+def soft_delete(db, dbObject):
+  dbObject.active = 0
+  db.merge(dbObject)
 
 @get('/initdb')
 def initdb(db):
