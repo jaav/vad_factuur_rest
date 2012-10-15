@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 import json
 from datetime import datetime
 from bottle import get, post, put, delete, request, abort, response
@@ -74,7 +74,7 @@ def login(db):
    if ok:
        response.set_cookie('username',username,settings.cookie_secret)
        response.set_cookie('password',hashlib.md5(password.encode('utf-8')).hexdigest(),settings.cookie_secret)
-       return {'auth': 'User Authenticated'}
+       return hashlib.md5(password.encode('utf-8')).hexdigest()
    else:
        forbidden()
 
@@ -631,6 +631,7 @@ def getArticles(db):
                    'unit': article.unit,
                    'weight': article.weight,
                    'create_date': str(article.create_date),
+                   'copyDate': str(article.copy_date),
                    'vat': str(article.vat),
                    'creator': article.creator,
                    'supplier': article.supplier
@@ -649,13 +650,15 @@ def getArticles(db):
 def addArticle(db):
     isValidUser(db,request)
     json_input = get_input_json(request)
+    username = json_input.get('creator')
+    user_id = getUserByUsername(username, db).id
     article = Article(article_type=json_input.get('article_type'),
             code=json_input.get('code'), name=json_input.get('name'),
             description=json_input.get('description'),list_price=json_input.get('listPrice'),
-            free_quantity=json_input.get('freeQuantity'),
+            free_quantity=json_input.get('freeQuantity'), copy_date=datetime.strptime(json_input.get("copyDate"),"%d/%m/%Y"),
             unit=json_input.get('unit'),supplier=json_input.get('supplier'),
             weight=json_input.get('weight'), create_date=datetime.now(),
-            vat=json_input.get('vat'),creator=json_input.get('creator'))
+            vat=json_input.get('vat'),creator=user_id)
     db.add(article)
 
 @post('/article/:id')
@@ -663,6 +666,8 @@ def updateArticle(id,db):
     isValidUser(db,request)
     try:
         json_input = get_input_json(request)
+        username = json_input.get('creator')
+        user_id = getUserByUsername(username, db).id
         article = db.query(Article).filter_by(id=id).first()
         if json_input.get('article_type'): article.article_type=json_input.get('article_type')
         if json_input.get('code'): article.code=json_input.get('code')
@@ -673,8 +678,9 @@ def updateArticle(id,db):
         if json_input.get('unit'): article.unit=json_input.get('unit')
         if json_input.get('weight'): article.weight=json_input.get('weight')
         if json_input.get('create_date'): article.create_date=datetime.strptime(json_input.get('create_date'), "%d/%m/%Y")
+        if json_input.get('copyDate'): article.copy_date=datetime.strptime(json_input.get('copyDate'), "%d/%m/%Y")
         if json_input.get('vat'): article.vat=json_input.get('vat')
-        if json_input.get('creator'): article.creator=json_input.get('creator')
+        if user_id: article.creator=user_id
         if json_input.get('supplier'): article.supplier=json_input.get('supplier')
         db.merge(article)
     except:
@@ -706,6 +712,7 @@ def getArticle(id,db):
                  'unit': article.unit,
                  'weight': article.weight,
                  'create_date': str(article.create_date),
+                 'copyDate': str(article.copy_date),
                  'vat': article.vat,
                  'creator': article.creator,
                  'supplier': article.supplier
@@ -999,4 +1006,16 @@ def initdb(db):
       return 'Problem while doing db init'
   else:
     return 'wrong passwd'
+
+
+#LOCAL DB ACCESSOR METHODS
+
+
+
+def getUserByUsername(username,db):
+    try:
+        user = db.query(User).filter_by(username=username).first()
+        return user
+    except:
+        return None
 

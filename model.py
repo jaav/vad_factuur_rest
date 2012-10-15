@@ -76,7 +76,7 @@ class Article(Base):
     active = Column(Boolean)
     free_quantity = Column(Integer)
 
-    def __init__(self, code, name, description, list_price, weight, create_date, vat, article_type, unit, creator, supplier):
+    def __init__(self, code, name, description, list_price, free_quantity, copy_date, weight, create_date, vat, article_type, unit, creator, supplier):
         self.code = code
         self.name = name
         self.description = description
@@ -88,6 +88,9 @@ class Article(Base):
         self.unit = unit
         self.creator = creator
         self.supplier = supplier
+        self.free_quantity = free_quantity
+        self.copy_date = copy_date
+        self.active = True
 
 class Stock(Base):
     __tablename__ = 'stock'
