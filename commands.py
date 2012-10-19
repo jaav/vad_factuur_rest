@@ -314,9 +314,9 @@ def getSectors(parent_id, db):
     isValidUser(db,request)
     orderOn = request.params.get('orderOn')
     if orderOn == None:
-      sectors = db.query(Sector).filter(and_(Sector.active==1,Sector.parent==id)).order_by('name')
+      sectors = db.query(Sector).filter(and_(Sector.active==1,Sector.parent==parent_id)).order_by('name')
     else:
-      sectors = db.query(Sector).filter(and_(Sector.active==1,Sector.parent==id)).order_by(orderOn)
+      sectors = db.query(Sector).filter(and_(Sector.active==1,Sector.parent==parent_id)).order_by(orderOn)
     json_response = [
             {'id': s.id,
                 'name': s.name,
@@ -604,19 +604,38 @@ def getArticles(db):
     isValidUser(db,request)
     fromPos = request.params.get('from')
     quantity = request.params.get('quantity')
-    full_info = request.params.get('fullInfo')
+    if request.params.get('fullInfo') and request.params.get('fullInfo')=='true':
+      full_info = True
+    else:
+      full_info = False
+    order_by = request.params.get('orderOn')
+    additional_condition = request.params.get('additionalCondition')
+    if request.params.get('includesNonActive') and request.params.get('includesNonActive')=='true':
+      includes_non_active = True
+    else:
+      includes_non_active = False
     paging = False
     if fromPos and quantity:
       paging=True
-    orderOn = request.params.get('orderOn')
-    if orderOn and paging:
-      articles = db.query(Article).filter_by(active=1).order_by(orderOn).offset(fromPos).limit(quantity)
-    elif orderOn==None and not paging:
-      articles = db.query(Article).filter_by(active=1).order_by('name')
-    elif orderOn:
-      articles = db.query(Article).filter_by(active=1).order_by(orderOn)
+
+
+    query = db.query(Article)
+    if additional_condition and includes_non_active :
+      query = query.filter(and_(Article.active==1, additional_condition))
+    elif additional_condition and not includes_non_active :
+      query = query.filter_by(additional_condition)
+    elif not includes_non_active :
+      query = query.filter_by(active=1)
+    if order_by:
+      query = query.order_by(order_by)
     else:
-      articles = db.query(Article).filter_by(active=1).order_by('name').offset(fromPos).limit(quantity)
+      query = query.order_by("id")
+    if paging:
+      articles = query.offset(fromPos).limit(quantity)
+    else:
+      articles = query.all()
+
+
     artsJson = []
     if full_info:
       for article in articles:
@@ -643,7 +662,8 @@ def getArticles(db):
       for article in articles:
           artDict = { 'id': article.id,'name': article.name}
           artsJson.append(artDict)
-    return json.dumps(artsJson,ensure_ascii=False)
+    test = json.dumps(artsJson,ensure_ascii=False)
+    return test
 
 @put('/article')
 @post('/article')
@@ -792,6 +812,7 @@ def addInvoiceLine(db):
             unit_discount=json_input.get('unit_discount'),
             invoice=json_input.get('order_id'))
     db.add(invoice_line)
+    adapt_stock(db, json_input.get('article'), json_input.get('quantity'))
 
 @post('/invoiceLine/:id')
 def updateInvoiceLine(id,db):
@@ -799,12 +820,16 @@ def updateInvoiceLine(id,db):
     try:
         json_input = get_input_json(request)
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
+        old_article_id = invoice_line.article
+        old_quantity = invoice_line.quantity
         if json_input.get('article'): invoice_line.article=json_input.get('article')
         if json_input.get('quantity'): invoice_line.quantity=json_input.get('quantity')
         if json_input.get('unit_price'): invoice_line.unit_price=json_input.get('unit_price')
         if json_input.get('unit_discount'): invoice_line.unit_discount=json_input.get('unit_discount')
         if json_input.get('invoice'): invoice_line.invoice=json_input.get('invoice')
         db.merge(invoice_line)
+        adapt_stock(db, old_article_id, -old_quantity)
+        adapt_stock(db, json_input.get('article'), json_input.get('quantity'))
     except:
         resource_not_found("InvoiceLine")
 
@@ -842,7 +867,10 @@ def deleteInvoiceLine(id,db):
     isValidUser(db,request)
     try:
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
-        soft_delete(db, invoice_line)
+        quantity = invoice_line.quantity
+        article_id = invoice_line.article
+        db.delete(invoice_line)
+        adapt_stock(db, article_id, -quantity)
     except:
         resource_not_found("InvoiceLine")
 
@@ -1018,4 +1046,10 @@ def getUserByUsername(username,db):
         return user
     except:
         return None
+
+def adapt_stock(db, article_id, quantity):
+  stock = db.query(Stock).filter_by(id=article_id).first()
+  if quantity:
+    stock.quantity -= quantity
+    db.merge(stock)
 
