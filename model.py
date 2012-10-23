@@ -5,10 +5,18 @@ from bottle.ext.sqlalchemy import SQLAlchemyPlugin
 from sqlalchemy import create_engine, Column, Integer, BigInteger,Sequence, String, ForeignKey, Float, DateTime, Boolean, Date
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.ext.declarative import declared_attr
 
 Base = declarative_base()
 engine = create_engine(settings.database,echo=True)
 
+class MyMixin(object):
+
+    @declared_attr
+    def __tablename__(cls):
+        return cls.__name__.lower()
+    id =  Column(Integer, Sequence('id_seq'), primary_key=True)
+    active = Column(Boolean)
 
 class ArticleType(Base):
     __tablename__ = 'article_type'
@@ -17,8 +25,9 @@ class ArticleType(Base):
     article = relationship("Article")
     active = Column(Boolean)
 
-    def __init__(self, name):
+    def __init__(self, name, active=True):
         self.name = name
+        self.active = active
 
 class Unit(Base):
     __tablename__ = 'unit'
@@ -29,6 +38,7 @@ class Unit(Base):
 
     def __init__(self, name):
         self.name = name
+        self.active=active
 
 class Supplier(Base):
     __tablename__ = 'supplier'
@@ -37,8 +47,9 @@ class Supplier(Base):
     article = relationship("Article")
     active = Column(Boolean)
 
-    def __init__(self, name):
+    def __init__(self, name, active=True):
         self.name = name
+        self.active=active
 
 class User(Base):
     __tablename__ = 'user'
@@ -50,15 +61,16 @@ class User(Base):
     article = relationship("Article")
     active = Column(Boolean)
 
-    def __init__(self, name, username, password, role):
+    def __init__(self, name, username, password, role, active=True):
         self.name = name
         self.username = username
         self.password_hash = hashlib.md5(password.encode("utf-8")).hexdigest()
         self.role = role
+        self.active=active
 
-class Article(Base):
+class Article(MyMixin, Base):
     __tablename__ = 'article'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
+    #id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     code = Column(String(50))
     name = Column(String(100))
     description = Column(String(500))
@@ -73,10 +85,10 @@ class Article(Base):
     supplier = Column(BigInteger, ForeignKey("supplier.id"))  
     stock = relationship("Stock")
     invoice_line = relationship("InvoiceLine")
-    active = Column(Boolean)
+    #active = Column(Boolean)
     free_quantity = Column(Integer)
 
-    def __init__(self, code, name, description, list_price, free_quantity, copy_date, weight, create_date, vat, article_type, unit, creator, supplier):
+    def __init__(self, code, name, description, list_price, free_quantity, copy_date, weight, create_date, vat, article_type, unit, creator, supplier, active=True):
         self.code = code
         self.name = name
         self.description = description
@@ -90,22 +102,19 @@ class Article(Base):
         self.supplier = supplier
         self.free_quantity = free_quantity
         self.copy_date = copy_date
-        self.active = True
+        self.active = active
 
-class Stock(Base):
+class Stock(MyMixin, Base):
     __tablename__ = 'stock'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     quantity = Column(Integer)
     article = Column(BigInteger, ForeignKey("article.id"))
-    active = Column(Boolean)
 
-    def __init__(self, quantity, article):
+    def __init__(self, quantity, article, active=True):
         self.quantity = quantity
         self.article = article
 
-class Customer(Base):
+class Customer(MyMixin, Base):
     __tablename__ = 'customer'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     vat = Column(String(20))
     iban = Column(String(100))
@@ -116,67 +125,63 @@ class Customer(Base):
     subsector = Column(BigInteger, ForeignKey("sector.id"))
     relationship("sector",primaryjoin="sector.id==customer.sector")
     relationship("sector",primaryjoin="sector.id==customer.subsector")
-    active = Column(Boolean)
 
-    def __init__(self, name, vat, iban, remark, sector, subsector):
+    def __init__(self, name, vat, iban, remark, sector, subsector, active=True):
         self.name = name
         self.vat = vat
         self.iban = iban
         self.remark = remark
         self.sector = sector
         self.subsector = subsector
+        self.active=active
 
-class Person(Base):
+class Person(MyMixin, Base):
     __tablename__ = 'person'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     title = Column(String(10))
     name = Column(String(100))
     email = Column(String(100))
-    mobile = Column(String(100))
+    phone = Column(String(100))
     customer = Column(BigInteger, ForeignKey("customer.id"))
-    active = Column(Boolean)
 
-    def __init__(self, name, title, email, mobile, customer):
+    def __init__(self, name, title, email, phone, customer, active=True):
         self.name = name
         self.title = title
         self.email = email
-        self.mobile = mobile
+        self.phone = phone
         self.customer = customer
+        self.active = active
 
-class Sector(Base):
+class Sector(MyMixin, Base):
     __tablename__ = 'sector'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     parent = Column(BigInteger, ForeignKey("sector.id"))
     children = relationship("Sector")
-    active = Column(Boolean)
 
-    def __init__(self, name, parent):
+    def __init__(self, name, parent, active=True):
         self.name = name
         self.parent = parent
+        self.active=active
 
-class InvoiceLine(Base):
+class InvoiceLine(MyMixin, Base):
     __tablename__ = 'invoice_line'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     article = Column(BigInteger, ForeignKey("article.id"))
     quantity = Column(Integer)
     weight = Column(Float)
     unit_price = Column(Float)
     unit_discount = Column(Float)
     invoice = Column(BigInteger, ForeignKey("invoice.id"))
-    active = Column(Boolean)
 
-    def __init(self, article, quantity, unit_price, unit_discount, invoice):
+    def __init(self, article, quantity, unit_price, unit_discount, invoice, active=True):
         self. article = article
         self.quantity = quantity
         self.unit_price = unit_price
         self.unit_discount = unit_discount
         self.invoice = invoice
+        self.active=active
 
 
-class Address(Base):
+class Address(MyMixin, Base):
     __tablename__ = 'address'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     customer = Column(BigInteger, ForeignKey("customer.id"))
     address_type = Column(Integer)
     address = Column(String(500))
@@ -185,9 +190,8 @@ class Address(Base):
     tel = Column(String(20))
     fax = Column(String(20))
     email = Column(String(200))
-    active = Column(Boolean)
 
-    def __init__(self, customer, address_type, address, zipcode, city, tel, fax, email):
+    def __init__(self, customer, address_type, address, zipcode, city, tel, fax, email, active=True):
         self.customer = customer
         self.address_type = address_type
         self.address = address
@@ -196,10 +200,10 @@ class Address(Base):
         self.tel = tel
         self.fax = fax
         self.email = email
+        self.active=active
 
-class Invoice(Base):
+class Invoice(MyMixin, Base):
     __tablename__ = 'invoice'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
     customer = Column(BigInteger, ForeignKey("customer.id"))
     inv_address = Column(BigInteger, ForeignKey("address.id"))
     del_address = Column(BigInteger, ForeignKey("address.id"))
@@ -218,9 +222,8 @@ class Invoice(Base):
     relationship("address",primaryjoin="address.id==invoice.del_address")
     relationship("address",primaryjoin="address.id==invoice.inv_address")
     invoice_line = relationship("InvoiceLine")
-    active = Column(Boolean)
 
-    def __init__(self, customer, inv_address, del_address, code, remark, shipping, total, vat, creation_date, delivery_date, paid_date, weight, status, creator):
+    def __init__(self, customer, inv_address, del_address, code, remark, shipping, total, vat, creation_date, delivery_date, paid_date, weight, status, creator, active=True):
         self.customer = customer
         self.inv_address = inv_address
         self.del_address = del_address
@@ -235,6 +238,7 @@ class Invoice(Base):
         self.weight = weight
         self.status = status
         self.creator = creator
+        self.active=active
 
 
 bottle.install(SQLAlchemyPlugin(engine, Base.metadata, create=True))
@@ -257,3 +261,5 @@ Base.metadata.create_all(engine)
 #
 #ALTER TABLE article ADD COLUMN free_quantity INT DEFAULT 0 NOT NULL;
 #ALTER TABLE article ADD COLUMN copy_date DATE AFTER create_date;
+
+#ALTER table person CHANGE mobile phone varchar(100);

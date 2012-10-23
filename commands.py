@@ -46,11 +46,7 @@ def getUser(id,db):
 @get('/users')
 def getUsers(db):
     isValidUser(db,request)
-    orderOn = request.params.get('orderOn')
-    if orderOn == None:
-      users = db.query(User).filter_by(active=1).order_by('name')
-    else:
-      users = db.query(User).filter_by(active=1).order_by(orderOn)
+    users = getDbObjects(db, User)
     json_response = [ {'id': user.id,
                        'name': user.name,
                        'username': user.username,
@@ -70,27 +66,27 @@ def deleteUser(id, db):
 def login(db):
    username = request.params.get('username') 
    password = request.params.get('password')
-   ok = check(db,username,password)
-   if ok:
+   user = check(db,username,password)
+   if user:
        response.set_cookie('username',username,settings.cookie_secret)
        response.set_cookie('password',hashlib.md5(password.encode('utf-8')).hexdigest(),settings.cookie_secret)
-       return hashlib.md5(password.encode('utf-8')).hexdigest()
+       return user.id+'___'+hashlib.md5(password.encode('utf-8')).hexdigest()
    else:
        forbidden()
 
 def check(db,username,password):
     if not username or not password:
-        return False
+        return None
     password = hashlib.md5(password.encode('utf-8')).hexdigest()
     try:
         user = db.query(User).filter(or_ (User.username==username,
                 User.password_hash==password))
         if user:
-            return True
+            return user
         else:
-            return False
+            return None
     except:
-        return False
+        return None
 
 def isValidUser(db,request):
     return True
@@ -144,7 +140,7 @@ def getUnit(id,db):
 @get('/units')
 def getUnits(db):
     isValidUser(db,request)
-    units = db.query(Unit).order_by('name')
+    units = getDbObjects(db, Unit)
     json_response = [ {'id': unit.id,
                         'name': unit.name} for unit in units]
     return json.dumps(json_response,ensure_ascii=False)
@@ -190,11 +186,7 @@ def getArticleType(id,db):
 @get('/articleTypes')
 def getArticleTypes(db):
     isValidUser(db,request)
-    orderOn = request.params.get('orderOn')
-    if orderOn == None:
-      articleTypes = db.query(ArticleType).filter_by(active=1).order_by('name')
-    else:
-      articleTypes = db.query(ArticleType).filter_by(active=1).order_by(orderOn)
+    articleTypes = getDbObjects(db, ArticleType)
     json_response = [ {'id': a.id,
                         'name': a.name} for a in articleTypes]
     return json.dumps(json_response,ensure_ascii=False)
@@ -241,11 +233,7 @@ def getSupplier(id,db):
 @get('/suppliers')
 def getSuppliers(db):
     isValidUser(db,request)
-    orderOn = request.params.get('orderOn')
-    if orderOn == None:
-      suppliers = db.query(Supplier).filter_by(active=1).order_by('name')
-    else:
-      suppliers = db.query(Supplier).filter_by(active=1).order_by(orderOn)
+    suppliers = getDbObjects(db, Supplier)
     json_response = [
             {'id': s.id,
                 'name': s.name} for s in suppliers]
@@ -298,11 +286,7 @@ def getSector(id, db):
 @get('/sectors')
 def getSectors(db):
     isValidUser(db,request)
-    orderOn = request.params.get('orderOn')
-    if orderOn == None:
-      sectors = db.query(Sector).filter_by(active=1).order_by('name')
-    else:
-      sectors = db.query(Sector).filter_by(active=1).order_by(orderOn)
+    sectors = getDbObjects(db, Sector)
     json_response = [
             {'id': s.id,
                 'name': s.name,
@@ -340,7 +324,7 @@ def addPerson(db):
         json_input = get_input_json(request)
         person  = Person(title=json_input.get('title'),
                 name=json_input.get('name'),email=json_input.get('email'),
-                mobile=json_input.get('mobile'),customer=json_input.get('customer'))
+                phone=json_input.get('phone'),customer=json_input.get('customer'))
         db.add(person)
     except:
         resource_not_found("Person")
@@ -353,7 +337,7 @@ def updatePerson(id,db):
         person = db.query(Person).filter_by(id=id).first()
         if json_input.get('name'): person.name = json_input.get('name')
         if json_input.get('email'): person.email = json_input.get('email')
-        if json_input.get('mobile'): person.mobile = json_input.get('mobile')
+        if json_input.get('phone'): person.phone = json_input.get('phone')
         if json_input.get('customer'): person.customer = json_input.get('customer')
         if json_input.get('title'): person.title = json_input.get('title')
         db.merge(person)
@@ -369,28 +353,28 @@ def getPerson(id,db):
                 'title': person.title,
                 'name': person.name,
                 'email': person.email,
-                'mobile': person.mobile,
+                'phone': person.phone,
                 'customer': person.customer }
     except:
         resource_not_found("Person")
 
-@get('/personByCustomer/:id')
-def getPersonByCustomer(id,db):
-    isValidUser(db,request)
-    try:
-        orderOn = request.params.get('orderOn')
-        if orderOn == None:
-          person = db.query(Person).filter(and_(Person.active==1, Person.customer==id)).order_by('id').first()
-        else:
-          person = db.query(Person).filter(and_(Person.active==1, Person.customer==id)).order_by(orderOn).first()
-        return { 'id': person.id,
-                'title': person.title,
-                'name': person.name,
-                'email': person.email,
-                'mobile': person.mobile,
-                'customer': person.customer }
-    except:
-        resource_not_found("Person")
+#@get('/personByCustomer/:id')
+#def getPersonByCustomer(id,db):
+#    isValidUser(db,request)
+#    try:
+#        orderOn = request.params.get('orderOn')
+#        if orderOn == None:
+#          person = db.query(Person).filter(and_(Person.active==1, Person.customer==id)).order_by('id').first()
+#        else:
+#          person = db.query(Person).filter(and_(Person.active==1, Person.customer==id)).order_by(orderOn).first()
+#        return { 'id': person.id,
+#                'title': person.title,
+#                'name': person.name,
+#                'email': person.email,
+#                'phone': person.phone,
+#                'customer': person.customer }
+#    except:
+#        resource_not_found("Person")
 
 @delete('/person/:id')
 def deletePerson(id,db):
@@ -404,12 +388,23 @@ def deletePerson(id,db):
 @get('/persons')
 def getPersons(db):
     isValidUser(db,request)
-    orderOn = request.params.get('orderOn')
-    if orderOn == None:
-      persons = db.query(Person).filter_by(active=1).order_by('name')
+    full_info = getFullInfo()
+    persons = getDbObjects(db, Person)
+
+    if full_info:
+      personsJson = []
+      for person in persons:
+          persDict = { 'id': person.id,
+                       'name': person.name,
+                       'title': person.title,
+                       'email': person.email,
+                       'phone': person.phone,
+                       'customer': person.customer }
+          personsJson.append(persDict)
+      return json.dumps(personsJson,ensure_ascii=False)
     else:
-      persons = db.query(Person).filter_by(active=1).order_by(orderOn)
-    json_response = [ { 'id': person.id } for person in persons]
+      json_response = [ { 'id': person.id } for person in persons]
+
     return json.dumps(json_response,ensure_ascii=False)
 
 @put('/customer')
@@ -470,7 +465,7 @@ def getCustomer(id,db):
                     'title': person.title,
                     'name': person.name,
                     'email': person.email,
-                    'mobile': person.mobile,
+                    'phone': person.phone,
                     'customer': person.customer }
             personDictList.append(person)
         custDict['person'] = personDictList
@@ -491,22 +486,8 @@ def deleteCustomer(id,db):
 @get('/customers')
 def getCustomers(db):
     isValidUser(db,request)
-    fromPos = request.params.get('from')
-    quantity = request.params.get('quantity')
-    paging = False
-    if fromPos and quantity:
-      paging=True
-    orderOn = request.params.get('orderOn')
-    full_info = request.params.get('fullInfo')
-    orderOn = request.params.get('orderOn')
-    if orderOn and paging:
-      customers = db.query(Customer).filter_by(active=1).order_by(orderOn).offset(fromPos).limit(quantity)
-    elif orderOn==None and not paging:
-      customers = db.query(Customer).filter_by(active=1).order_by('name')
-    elif orderOn:
-      customers = db.query(Customer).filter_by(active=1).order_by(orderOn)
-    else:
-      customers = db.query(Customer).filter_by(active=1).order_by('name').offset(fromPos).limit(quantity)
+    full_info = getFullInfo()
+    customers = getDbObjects(db, Customer)
     if full_info:
       customersJson = []
       for customer in customers:
@@ -522,15 +503,15 @@ def getCustomers(db):
     else:
       return json.dumps([{'id' : cust.id, 'name' : cust.name } for cust in customers],ensure_ascii=False)
 
-@get('/customersBySector/:id')
-def getCustomersBySector(id,db):
-    isValidUser(db,request)
-    try:
-        customers = db.query(Customer).filter(or_ (Customer.sector==id,
-                Customer.subsector==id))
-        return json.dumps([{'id' : cust.id } for cust in customers],ensure_ascii=False)
-    except:
-        resource_not_found("Customers")
+#@get('/customersBySector/:id')
+#def getCustomersBySector(id,db):
+#    isValidUser(db,request)
+#    try:
+#        customers = db.query(Customer).filter(or_ (Customer.sector==id,
+#                Customer.subsector==id))
+#        return json.dumps([{'id' : cust.id } for cust in customers],ensure_ascii=False)
+#    except:
+#        resource_not_found("Customers")
 
 @put('/address')
 @post('/address')
@@ -581,11 +562,7 @@ def getAddress(id,db):
 @get('/addresss')
 def getAddresses(db):
     isValidUser(db,request)
-    orderOn = request.params.get('orderOn')
-    if orderOn == None:
-      addresses = db.query(Address).filter_by(active=1).order_by('address')
-    else:
-      addresses = db.query(Address).filter_by(active=1).order_by(orderOn)
+    addresses = getDbObjects(db, Address)
     json_response = [ {'id': a.id} for a in addresses]
     return json.dumps(json_response,ensure_ascii=False)
 
@@ -602,39 +579,8 @@ def deleteAddress(id,db):
 @get('/articles')
 def getArticles(db):
     isValidUser(db,request)
-    fromPos = request.params.get('from')
-    quantity = request.params.get('quantity')
-    if request.params.get('fullInfo') and request.params.get('fullInfo')=='true':
-      full_info = True
-    else:
-      full_info = False
-    order_by = request.params.get('orderOn')
-    additional_condition = request.params.get('additionalCondition')
-    if request.params.get('includesNonActive') and request.params.get('includesNonActive')=='true':
-      includes_non_active = True
-    else:
-      includes_non_active = False
-    paging = False
-    if fromPos and quantity:
-      paging=True
-
-
-    query = db.query(Article)
-    if additional_condition and includes_non_active :
-      query = query.filter(and_(Article.active==1, additional_condition))
-    elif additional_condition and not includes_non_active :
-      query = query.filter_by(additional_condition)
-    elif not includes_non_active :
-      query = query.filter_by(active=1)
-    if order_by:
-      query = query.order_by(order_by)
-    else:
-      query = query.order_by("id")
-    if paging:
-      articles = query.offset(fromPos).limit(quantity)
-    else:
-      articles = query.all()
-
+    articles = getDbObjects(db, Article)
+    full_info = getFullInfo()
 
     artsJson = []
     if full_info:
@@ -670,8 +616,8 @@ def getArticles(db):
 def addArticle(db):
     isValidUser(db,request)
     json_input = get_input_json(request)
-    username = json_input.get('creator')
-    user_id = getUserByUsername(username, db).id
+    user_id = json_input.get('creator')
+    #user_id = getUserByUsername(username, db).id
     article = Article(article_type=json_input.get('article_type'),
             code=json_input.get('code'), name=json_input.get('name'),
             description=json_input.get('description'),list_price=json_input.get('listPrice'),
@@ -686,8 +632,8 @@ def updateArticle(id,db):
     isValidUser(db,request)
     try:
         json_input = get_input_json(request)
-        username = json_input.get('creator')
-        user_id = getUserByUsername(username, db).id
+        user_id = json_input.get('creator')
+        #user_id = getUserByUsername(username, db).id
         article = db.query(Article).filter_by(id=id).first()
         if json_input.get('article_type'): article.article_type=json_input.get('article_type')
         if json_input.get('code'): article.code=json_input.get('code')
@@ -707,14 +653,14 @@ def updateArticle(id,db):
         resource_not_found("Article")
 
 
-@get('/articleBySupplier/:supplierId')
-def getArticlesBySupplier(supplierId,db):
-    isValidUser(db,request)
-    try:
-        articles = db.query(Article).filter_by(supplier=supplierId).all()
-        return json.dumps([ {'id': a.id } for a in articles ],ensure_ascii=False)
-    except:
-        resource_not_found("Article")
+#@get('/articleBySupplier/:supplierId')
+#def getArticlesBySupplier(supplierId,db):
+#    isValidUser(db,request)
+#    try:
+#        articles = db.query(Article).filter_by(supplier=supplierId).all()
+#        return json.dumps([ {'id': a.id } for a in articles ],ensure_ascii=False)
+#    except:
+#        resource_not_found("Article")
 
 @get('/article/:id')
 def getArticle(id,db):
@@ -795,7 +741,7 @@ def deleteStock(id,db):
 @get('/stocks')
 def getStocks(db):
     isValidUser(db,request)
-    stocks = db.query(Stock).filter_by(active=1)
+    stocks = getDbObjects(db, Stock)
     json_response = [ {'id': s.id,
         'article': s.article,
         'quantity': s.quantity} for s in stocks ]
@@ -847,19 +793,22 @@ def getInvoiceLine(id,db):
     except:
         resource_not_found("InvoiceLine")
 
-@get('/invoiceLinesByInvoice/:invoice_id')
-def getInvoiceLineByInvoice(invoice_id,db):
-    isValidUser(db,request)
-    try:
-        invoice_lines = db.query(InvoiceLine).filter(and_(InvoiceLine.invoice==invoice_id, InvoiceLine.active==1)).order_by('id')
-        return json.dumps([{'id': invoice_line.id, 'article': invoice_line.article, 'quantity': invoice_line.quantity, 'unit_price': invoice_line.unit_price, 'unit_discount': invoice_line.unit_discount} for invoice_line in invoice_lines],ensure_ascii=False)
-    except:
-        resource_not_found("InvoiceLine")
+#@get('/invoiceLinesByInvoice/:invoice_id')
+#
+# IS REPLACED BY /invoiceLines with additionalCondition set to invoice=8
+#
+#def getInvoiceLineByInvoice(invoice_id,db):
+#    isValidUser(db,request)
+#    try:
+#        invoice_lines = db.query(InvoiceLine).filter(and_(InvoiceLine.invoice==invoice_id, InvoiceLine.active==1)).order_by('id')
+#        return json.dumps([{'id': invoice_line.id, 'article': invoice_line.article, 'quantity': invoice_line.quantity, 'unit_price': invoice_line.unit_price, 'unit_discount': invoice_line.unit_discount} for invoice_line in invoice_lines],ensure_ascii=False)
+#    except:
+#        resource_not_found("InvoiceLine")
 
 @get('/invoiceLines')
 def getInvoiceLines(db):
     isValidUser(db,request)
-    invoice_lines = db.query(InvoiceLine).order_by(InvoiceLine.id.desc())
+    invoice_lines = getDbObjects(db, InvoiceLine)
     return json.dumps([{'id': i.id} for i in invoice_lines],ensure_ascii=False)
 
 @delete('/invoiceLine/:id')
@@ -967,22 +916,8 @@ def getInvoice(id,db):
 @get('/invoices')
 def getInvoices(db):
     isValidUser(db,request)
-    fromPos = request.params.get('from')
-    quantity = request.params.get('quantity')
-    full_info = request.params.get('fullInfo')
-
-    paging = False
-    if fromPos and quantity:
-      paging=True
-    orderOn = request.params.get('orderOn')
-    if orderOn and paging:
-      invoices = db.query(Invoice).filter_by(active=1).order_by(orderOn).offset(fromPos).limit(quantity)
-    elif orderOn==None and not paging:
-      invoices = db.query(Invoice).filter_by(active=1).order_by('id')
-    elif orderOn:
-      invoices = db.query(Invoice).filter_by(active=1).order_by(orderOn)
-    else:
-      invoices = db.query(Invoice).filter_by(active=1).order_by('id').offset(fromPos).limit(quantity)
+    invoices = getDbObjects(db, Invoice)
+    full_info = getFullInfo()
 
 
     invoicesJson = []
@@ -1020,7 +955,7 @@ def get_input_json(http_request):
     return json.loads(req)
 
 def soft_delete(db, dbObject):
-  dbObject.active = 0
+  dbObject.active = False
   db.merge(dbObject)
 
 @get('/initdb')
@@ -1040,16 +975,55 @@ def initdb(db):
 
 
 
-def getUserByUsername(username,db):
-    try:
-        user = db.query(User).filter_by(username=username).first()
-        return user
-    except:
-        return None
+#def getUserByUsername(username,db):
+#    try:
+#        user = db.query(User).filter_by(username=username).first()
+#        return user
+#    except:
+#        return None
 
 def adapt_stock(db, article_id, quantity):
   stock = db.query(Stock).filter_by(id=article_id).first()
   if quantity:
     stock.quantity -= quantity
     db.merge(stock)
+    
+def getDbObjects(db, clazz):
+  isValidUser(db,request)
+  fromPos = request.params.get('from')
+  quantity = request.params.get('quantity')
+  order_by = request.params.get('orderOn')
+  additional_condition = request.params.get('additionalCondition')
+  if request.params.get('includesNonActive') and request.params.get('includesNonActive')=='true':
+    includes_non_active = True
+  else:
+    includes_non_active = False
+  paging = False
+  if fromPos and quantity:
+    paging=True
+
+
+  query = db.query(clazz)
+  if additional_condition and includes_non_active :
+    query = query.filter(and_(clazz.active==1, additional_condition))
+  elif additional_condition and not includes_non_active :
+    query = query.filter(additional_condition)
+  elif not includes_non_active :
+    query = query.filter(clazz.active==1)
+  if order_by:
+    query = query.order_by(order_by)
+  else:
+    query = query.order_by("id")
+  if paging:
+    objects = query.offset(fromPos).limit(quantity)
+  else:
+    objects = query.all()
+  
+  return objects
+
+def getFullInfo():
+  if request.params.get('fullInfo') and request.params.get('fullInfo')=='true':
+    return True
+  else:
+    return False
 
