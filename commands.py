@@ -36,10 +36,7 @@ def getUser(id,db):
     isValidUser(db,request)
     try:
         user = db.query(User).filter_by(id=id).first()
-        return {'id': user.id,
-                     'name': user.name,
-                     'username': user.username,
-                     'role': user.role}
+        return user_json()
     except:
         resource_not_found( 'User')
 
@@ -47,11 +44,14 @@ def getUser(id,db):
 def getUsers(db):
     isValidUser(db,request)
     users = getDbObjects(db, User)
-    json_response = [ {'id': user.id,
-                       'name': user.name,
-                       'username': user.username,
-                       'role': user.role} for user in users]
+    json_response = [ user_json(user) for user in users]
     return json.dumps(json_response,ensure_ascii=False)
+
+def user_json(user):
+  return {'id': user.id,
+               'name': user.name,
+               'username': user.username,
+               'role': user.role}
 
 @delete('/user/:id')
 def deleteUser(id, db):
@@ -349,12 +349,7 @@ def getPerson(id,db):
     isValidUser(db,request)
     try:
         person = db.query(Person).filter_by(id=id).first()
-        return { 'id': person.id,
-                'title': person.title,
-                'name': person.name,
-                'email': person.email,
-                'phone': person.phone,
-                'customer': person.customer }
+        return person_json(person)
     except:
         resource_not_found("Person")
 
@@ -394,18 +389,21 @@ def getPersons(db):
     if full_info:
       personsJson = []
       for person in persons:
-          persDict = { 'id': person.id,
-                       'name': person.name,
-                       'title': person.title,
-                       'email': person.email,
-                       'phone': person.phone,
-                       'customer': person.customer }
+          persDict = person_json(person)
           personsJson.append(persDict)
       return json.dumps(personsJson,ensure_ascii=False)
     else:
       json_response = [ { 'id': person.id } for person in persons]
 
     return json.dumps(json_response,ensure_ascii=False)
+
+def person_json(person):
+  return { 'id': person.id,
+                  'title': person.title,
+                  'name': person.name,
+                  'email': person.email,
+                  'phone': person.phone,
+                  'customer': person.customer }
 
 @put('/customer')
 @post('/customer')
@@ -586,21 +584,7 @@ def getArticles(db):
     if full_info:
       for article in articles:
           stock = db.query(Stock).filter_by(article=article.id).first()
-          artDict = { 'id': article.id,
-                   'article_type': article.article_type,
-                   'code': article.code,
-                   'name': article.name,
-                   'description': article.description,
-                   'listPrice': article.list_price,
-                   'freeQuantity': article.free_quantity,
-                   'unit': article.unit,
-                   'weight': article.weight,
-                   'create_date': str(article.create_date),
-                   'copyDate': str(article.copy_date),
-                   'vat': str(article.vat),
-                   'creator': article.creator,
-                   'supplier': article.supplier
-                   }
+          artDict = article_json(article)
           if stock:
               artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
           artsJson.append(artDict)
@@ -668,21 +652,7 @@ def getArticle(id,db):
     try:
         article = db.query(Article).filter_by(id=id).first()
         stock = db.query(Stock).filter_by(article=article.id).first()
-        artDict = { 'id': article.id,
-                 'article_type': article.article_type,
-                 'code': article.code,
-                 'name': article.name,
-                 'description': article.description,
-                 'listPrice': article.list_price,
-                 'freeQuantity': article.free_quantity,
-                 'unit': article.unit,
-                 'weight': article.weight,
-                 'create_date': str(article.create_date),
-                 'copyDate': str(article.copy_date),
-                 'vat': article.vat,
-                 'creator': article.creator,
-                 'supplier': article.supplier
-                 }
+        artDict = article_json(article)
         if stock:
             artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
         return artDict
@@ -697,6 +667,23 @@ def deleteArticle(id,db):
         soft_delete(db, article)
     except:
         resource_not_found('Article')
+
+def article_json(article):
+  return { 'id': article.id,
+     'article_type': article.article_type,
+     'code': article.code,
+     'name': article.name,
+     'description': article.description,
+     'listPrice': article.list_price,
+     'freeQuantity': article.free_quantity,
+     'unit': article.unit,
+     'weight': article.weight,
+     'create_date': str(article.create_date),
+     'copyDate': str(article.copy_date),
+     'vat': article.vat,
+     'creator': article.creator,
+     'supplier': article.supplier
+     }
 
 @put('/stock')
 @post('/stock')
@@ -889,21 +876,7 @@ def getInvoice(id,db):
         customer = db.query(Customer).filter_by(id=invoice.customer).first()
         if customer:
             customer_json = {'id': customer.id, 'name': customer.name}
-        return {'id': invoice.id,
-                'customer': customer_json,
-                'inv_address': invoice.inv_address,
-                'del_address': invoice.del_address,
-                'code': invoice.code,
-                'remark': invoice.remark,
-                'shipping': invoice.shipping,
-                'total': invoice.total,
-                'vat': invoice.vat,
-                'creation_date': str(invoice.creation_date),
-                'delivery_date': str(invoice.delivery_date),
-                'paid_date': str(invoice.paid_date),
-                'weight': invoice.weight,
-                'status': invoice.status,
-                'creator': invoice.creator }
+        return invoice_json(invoice, customer_json)
     except:
         resource_not_found("Invoice")
 
@@ -924,23 +897,31 @@ def getInvoices(db):
     if full_info:
       for invoice in invoices:
           customer = db.query(Customer).filter_by(id=invoice.customer).first()
-          invDict = { 'id': invoice.id,
-                   'code': invoice.code,
-                   'total': invoice.total,
-                   'status': invoice.status,
-                   'shipping': invoice.shipping,
-                   'remark': invoice.remark,
-                   'delivery_date': str(invoice.delivery_date),
-                   'creation_date': str(invoice.creation_date)
-                   }
-          if customer:
-              invDict['customer'] = {'id': customer.id, 'name': customer.name}
+          invDict = invoice_json(invoice, customer)
           invoicesJson.append(invDict)
     else:
       for invoice in invoices:
           invDict = { 'id': invoice.id}
           invoicesJson.append(invDict)
     return json.dumps(invoicesJson,ensure_ascii=False)
+
+def invoice_json(invoice, customer_json):
+  invoice_json = {'id': invoice.id,
+                  'inv_address': invoice.inv_address,
+                  'del_address': invoice.del_address,
+                  'code': invoice.code,
+                  'remark': invoice.remark,
+                  'shipping': invoice.shipping,
+                  'total': invoice.total,
+                  'vat': invoice.vat,
+                  'creation_date': str(invoice.creation_date),
+                  'delivery_date': str(invoice.delivery_date),
+                  'paid_date': str(invoice.paid_date),
+                  'weight': invoice.weight,
+                  'status': invoice.status,
+                  'creator': invoice.creator }
+  if customer_json:
+      invoice_json['customer'] = customer_json
 
 def resource_not_found(resource):
     abort(404, "%s Not Found" %resource)
