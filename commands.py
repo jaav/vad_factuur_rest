@@ -68,9 +68,9 @@ def login(db):
    password = request.params.get('password')
    user = check(db,username,password)
    if user:
-       response.set_cookie('username',username,settings.cookie_secret)
-       response.set_cookie('password',hashlib.md5(password.encode('utf-8')).hexdigest(),settings.cookie_secret)
-       return user.id+'___'+hashlib.md5(password.encode('utf-8')).hexdigest()
+       #response.set_cookie('username',username,settings.cookie_secret)
+       #response.set_cookie('password',hashlib.md5(password.encode('utf-8')).hexdigest(),settings.cookie_secret)
+       return str(user.id)+'___'+hashlib.md5(password.encode('utf-8')).hexdigest()
    else:
        forbidden()
 
@@ -79,8 +79,8 @@ def check(db,username,password):
         return None
     password = hashlib.md5(password.encode('utf-8')).hexdigest()
     try:
-        user = db.query(User).filter(or_ (User.username==username,
-                User.password_hash==password))
+        user = db.query(User).filter(and_ (User.username==username,
+                User.password_hash==password)).first()
         if user:
             return user
         else:
@@ -448,6 +448,7 @@ def getCustomer(id,db):
         addressDictList = []
         personDictList = []
         for add in addresses:
+          if add.active:
             address = {'id': add.id,
                     'customer': add.customer,
                     'address': add.address,
@@ -459,6 +460,7 @@ def getCustomer(id,db):
                     'email': add.email }
             addressDictList.append(address)
         for person in persons:
+          if person.active:
             person =  {'id': person.id,
                     'title': person.title,
                     'name': person.name,
@@ -545,24 +547,23 @@ def getAddress(id,db):
     isValidUser(db,request)
     try:
         address = db.query(Address).filter_by(id=id).first()
-        return {'id': address.id,
-                'customer': address.customer,
-                'address': address.address,
-                'address_type': address.address_type,
-                'zipcode': address.zipcode,
-                'city': address.city,
-                'tel': address.tel,
-                'fax': address.fax,
-                'email': address.email }
+        return address_json(address)
     except:
         resource_not_found('Address')
 
+@get('/addresses')
 @get('/addresss')
 def getAddresses(db):
     isValidUser(db,request)
     addresses = getDbObjects(db, Address)
-    json_response = [ {'id': a.id} for a in addresses]
-    return json.dumps(json_response,ensure_ascii=False)
+    full_info = getFullInfo()
+    addsJson = []
+    if full_info:
+      for add in addresses:
+        addDict = address_json(add)
+        addsJson.append(addDict)
+    else: addsJson.append({'id': a.id} for a in addresses)
+    return json.dumps(addsJson,ensure_ascii=False)
 
 @delete('/address/:id')
 def deleteAddress(id,db):
@@ -572,6 +573,19 @@ def deleteAddress(id,db):
         soft_delete(db, address)
     except:
         resource_not_found('Address')
+
+
+
+def address_json(address):
+  return {'id': address.id,
+          'customer': address.customer,
+          'address': address.address,
+          'address_type': address.address_type,
+          'zipcode': address.zipcode,
+          'city': address.city,
+          'tel': address.tel,
+          'fax': address.fax,
+          'email': address.email }
 
 
 @get('/articles')
@@ -771,12 +785,7 @@ def getInvoiceLine(id,db):
     isValidUser(db,request)
     try:
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
-        return {'id': invoice_line.id,
-                'article': invoice_line.article,
-                'quantity': invoice_line.quantity,
-                'unit_price': invoice_line.unit_price,
-                'unit_discount': invoice_line.unit_discount,
-                'invoice': invoice_line.invoice }
+        return order_line_json(invoice_line)
     except:
         resource_not_found("InvoiceLine")
 
@@ -796,7 +805,19 @@ def getInvoiceLine(id,db):
 def getInvoiceLines(db):
     isValidUser(db,request)
     invoice_lines = getDbObjects(db, InvoiceLine)
-    return json.dumps([{'id': i.id} for i in invoice_lines],ensure_ascii=False)
+    full_info = getFullInfo()
+
+
+    invoiceLinesJson = []
+    if full_info:
+      for invoice_line in invoice_lines:
+          invDict = order_line_json(invoice_line)
+          invoiceLinesJson.append(invDict)
+    else:
+      for invoice_line in invoice_lines:
+          invDict = { 'id': invoice_line.id}
+          invoiceLinesJson.append(invDict)
+    return json.dumps(invoiceLinesJson,ensure_ascii=False)
 
 @delete('/invoiceLine/:id')
 def deleteInvoiceLine(id,db):
@@ -809,6 +830,16 @@ def deleteInvoiceLine(id,db):
         adapt_stock(db, article_id, -quantity)
     except:
         resource_not_found("InvoiceLine")
+
+
+def order_line_json(invoice_line):
+  return { 'id': invoice_line.id,
+     'article': invoice_line.article,
+     'quantity': invoice_line.quantity,
+     'unit_price': invoice_line.unit_price,
+     'unit_discount': invoice_line.unit_discount,
+     'order_id': invoice_line.invoice
+     }
 
 @put('/invoice')
 @post('/invoice')
@@ -874,9 +905,7 @@ def getInvoice(id,db):
     try:
         invoice = db.query(Invoice).filter_by(id=id).first()
         customer = db.query(Customer).filter_by(id=invoice.customer).first()
-        if customer:
-            customer_json = {'id': customer.id, 'name': customer.name}
-        return invoice_json(invoice, customer_json)
+        return invoice_json(invoice, customer)
     except:
         resource_not_found("Invoice")
 
@@ -905,7 +934,7 @@ def getInvoices(db):
           invoicesJson.append(invDict)
     return json.dumps(invoicesJson,ensure_ascii=False)
 
-def invoice_json(invoice, customer_json):
+def invoice_json(invoice, customer):
   invoice_json = {'id': invoice.id,
                   'inv_address': invoice.inv_address,
                   'del_address': invoice.del_address,
@@ -920,8 +949,11 @@ def invoice_json(invoice, customer_json):
                   'weight': invoice.weight,
                   'status': invoice.status,
                   'creator': invoice.creator }
-  if customer_json:
-      invoice_json['customer'] = customer_json
+  if customer:
+      invoice_json['customer'] = {'id': customer.id, 'name': customer.name}
+  return invoice_json
+
+
 
 def resource_not_found(resource):
     abort(404, "%s Not Found" %resource)
@@ -986,9 +1018,9 @@ def getDbObjects(db, clazz):
 
   query = db.query(clazz)
   if additional_condition and includes_non_active :
-    query = query.filter(and_(clazz.active==1, additional_condition))
-  elif additional_condition and not includes_non_active :
     query = query.filter(additional_condition)
+  elif additional_condition and not includes_non_active :
+    query = query.filter(and_(clazz.active==1, additional_condition))
   elif not includes_non_active :
     query = query.filter(clazz.active==1)
   if order_by:
