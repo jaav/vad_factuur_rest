@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 from bottle import get, post, put, delete, request, abort, response
 import hashlib
+from sqlalchemy.exc import ProgrammingError
 import cleaner
 import model
 import settings
@@ -765,19 +766,19 @@ def addInvoiceLine(db):
 def updateInvoiceLine(id,db):
     isValidUser(db,request)
     try:
-        json_input = get_input_json(request)
-        invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
-        old_article_id = invoice_line.article
-        old_quantity = invoice_line.quantity
-        if json_input.get('article'): invoice_line.article=json_input.get('article')
-        if json_input.get('quantity'): invoice_line.quantity=json_input.get('quantity')
-        if json_input.get('unit_price'): invoice_line.unit_price=json_input.get('unit_price')
-        if json_input.get('unit_discount'): invoice_line.unit_discount=json_input.get('unit_discount')
-        if json_input.get('invoice'): invoice_line.invoice=json_input.get('invoice')
+      json_input = get_input_json(request)
+      invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
+      old_article_id = invoice_line.article
+      old_quantity = invoice_line.quantity
+      if json_input.get('article') and json_input.get('article').get('id'):
+        invoice_line.article=json_input.get('article').get('id')
+        if json_input.get('quantity') is not None: invoice_line.quantity=json_input.get('quantity')
+        if json_input.get('unit_discount') is not None: invoice_line.unit_discount=json_input.get('unit_discount')
+        if json_input.get('invoice') is not None: invoice_line.invoice=json_input.get('invoice')
         db.merge(invoice_line)
         adapt_stock(db, old_article_id, -old_quantity)
-        adapt_stock(db, json_input.get('article'), json_input.get('quantity'))
-    except:
+        adapt_stock(db, json_input.get('article').get('id'), json_input.get('quantity'))
+    except ProgrammingError as e:
         resource_not_found("InvoiceLine")
 
 @get('/invoiceLine/:id')
@@ -811,7 +812,7 @@ def getInvoiceLines(db):
     invoiceLinesJson = []
     if full_info:
       for invoice_line in invoice_lines:
-          invDict = order_line_json(invoice_line)
+          invDict = order_line_json(db, invoice_line)
           invoiceLinesJson.append(invDict)
     else:
       for invoice_line in invoice_lines:
@@ -832,14 +833,16 @@ def deleteInvoiceLine(id,db):
         resource_not_found("InvoiceLine")
 
 
-def order_line_json(invoice_line):
-  return { 'id': invoice_line.id,
-     'article': invoice_line.article,
+def order_line_json(db, invoice_line):
+  art_object = { 'id': invoice_line.id,
      'quantity': invoice_line.quantity,
-     'unit_price': invoice_line.unit_price,
      'unit_discount': invoice_line.unit_discount,
      'order_id': invoice_line.invoice
      }
+  if invoice_line.article:
+    full_article = db.query(Article).filter(Article.id==invoice_line.article).order_by('id').first()
+    if full_article: art_object["article"] = article_json(full_article)
+  return art_object
 
 @put('/invoice')
 @post('/invoice')
