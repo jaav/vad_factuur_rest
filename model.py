@@ -170,14 +170,16 @@ class InvoiceLine(MyMixin, Base):
     unit_price = Column(Float)
     unit_discount = Column(Float)
     invoice = Column(BigInteger, ForeignKey("invoice.id"))
+    apply_free = Column(Boolean)
 
-    def __init(self, article, quantity, unit_price, unit_discount, invoice, active=True):
+    def __init(self, article, quantity, unit_price, unit_discount, invoice, active=True, apply_free=True):
         self. article = article
         self.quantity = quantity
         self.unit_price = unit_price
         self.unit_discount = unit_discount
         self.invoice = invoice
         self.active=active
+        self.apply_free=apply_free
 
 
 class Address(MyMixin, Base):
@@ -263,3 +265,5 @@ Base.metadata.create_all(engine)
 #ALTER TABLE article ADD COLUMN copy_date DATE AFTER create_date;
 
 #ALTER table person CHANGE mobile phone varchar(100);
+
+#ALTER TABLE invoice_line ADD COLUMN apply_free BOOL DEFAULT true NOT NULL;

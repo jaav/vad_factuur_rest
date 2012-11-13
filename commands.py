@@ -44,8 +44,13 @@ def getUser(id,db):
 @get('/users')
 def getUsers(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     users = getDbObjects(db, User)
-    json_response = [ user_json(user) for user in users]
+    json_response['data'].append([ user_json(user) for user in users])
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, User)
+    
     return json.dumps(json_response,ensure_ascii=False)
 
 def user_json(user):
@@ -141,9 +146,13 @@ def getUnit(id,db):
 @get('/units')
 def getUnits(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     units = getDbObjects(db, Unit)
-    json_response = [ {'id': unit.id,
+    json_response['data'] = [ {'id': unit.id,
                         'name': unit.name} for unit in units]
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Unit)
     return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/unit/:id')
@@ -187,9 +196,13 @@ def getArticleType(id,db):
 @get('/articleTypes')
 def getArticleTypes(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     articleTypes = getDbObjects(db, ArticleType)
-    json_response = [ {'id': a.id,
+    json_response['data'] = [ {'id': a.id,
                         'name': a.name} for a in articleTypes]
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, ArticleType)
     return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/articleType/:id')
@@ -234,10 +247,14 @@ def getSupplier(id,db):
 @get('/suppliers')
 def getSuppliers(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     suppliers = getDbObjects(db, Supplier)
-    json_response = [
+    json_response['data'] = [
             {'id': s.id,
                 'name': s.name} for s in suppliers]
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Supplier)
     return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/supplier/:id')
@@ -287,11 +304,15 @@ def getSector(id, db):
 @get('/sectors')
 def getSectors(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     sectors = getDbObjects(db, Sector)
-    json_response = [
+    json_response['data'] = [
             {'id': s.id,
                 'name': s.name,
                 'parent': s.parent} for s in sectors]
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Sector)
     return json.dumps(json_response, ensure_ascii=False)
 
 @get('/subSectors/:parent_id')
@@ -385,18 +406,21 @@ def deletePerson(id,db):
 def getPersons(db):
     isValidUser(db,request)
     full_info = getFullInfo()
+    json_response = getJsonContainer()
     persons = getDbObjects(db, Person)
-
+    count = request.params.get('count')
     if full_info:
-      personsJson = []
       for person in persons:
           persDict = person_json(person)
-          personsJson.append(persDict)
-      return json.dumps(personsJson,ensure_ascii=False)
+          json_response['data'].append(persDict)
+      if count is not None:
+        json_response['info']['count']=getCount(db, User)
+      return json.dumps(json_response,ensure_ascii=False)
     else:
-      json_response = [ { 'id': person.id } for person in persons]
-
-    return json.dumps(json_response,ensure_ascii=False)
+      json_response['data'] = [ { 'id': person.id } for person in persons]
+      if count is not None:
+        json_response['info']['count']=getCount(db, Person)
+      return json.dumps(json_response,ensure_ascii=False)
 
 def person_json(person):
   return { 'id': person.id,
@@ -488,9 +512,10 @@ def deleteCustomer(id,db):
 def getCustomers(db):
     isValidUser(db,request)
     full_info = getFullInfo()
+    json_response = getJsonContainer()
     customers = getDbObjects(db, Customer)
+    count = request.params.get('count')
     if full_info:
-      customersJson = []
       for customer in customers:
           custDict = { 'id': customer.id,
                        'name': customer.name,
@@ -499,10 +524,15 @@ def getCustomers(db):
                        'remark': customer.remark,
                        'sector': customer.sector,
                        'subsector': customer.subsector }
-          customersJson.append(custDict)
-      return json.dumps(customersJson,ensure_ascii=False)
+          json_response['data'].append(custDict)
+      if count is not None:
+        json_response['info']['count']=getCount(db, Customer)
+      return json.dumps(json_response,ensure_ascii=False)
     else:
-      return json.dumps([{'id' : cust.id, 'name' : cust.name } for cust in customers],ensure_ascii=False)
+      if count is not None:
+        json_response['info']['count']=getCount(db, Customer)
+      json_response['data'] = [{'id' : cust.id, 'name' : cust.name } for cust in customers]
+      return json.dumps(json_response,ensure_ascii=False)
 
 #@get('/customersBySector/:id')
 #def getCustomersBySector(id,db):
@@ -556,15 +586,18 @@ def getAddress(id,db):
 @get('/addresss')
 def getAddresses(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     addresses = getDbObjects(db, Address)
     full_info = getFullInfo()
-    addsJson = []
     if full_info:
       for add in addresses:
         addDict = address_json(add)
-        addsJson.append(addDict)
-    else: addsJson.append({'id': a.id} for a in addresses)
-    return json.dumps(addsJson,ensure_ascii=False)
+        json_response['data'].append(addDict)
+    else: json_response['data'].append({'id': a.id} for a in addresses)
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Address)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/address/:id')
 def deleteAddress(id,db):
@@ -595,20 +628,22 @@ def getArticles(db):
     articles = getDbObjects(db, Article)
     full_info = getFullInfo()
 
-    artsJson = []
+    json_response = getJsonContainer()
     if full_info:
       for article in articles:
           stock = db.query(Stock).filter_by(article=article.id).first()
-          artDict = article_json(article)
+          artDict = article_json(db, article)
           if stock:
               artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
-          artsJson.append(artDict)
+          json_response['data'].append(artDict)
     else:
       for article in articles:
           artDict = { 'id': article.id,'name': article.name}
-          artsJson.append(artDict)
-    test = json.dumps(artsJson,ensure_ascii=False)
-    return test
+          json_response['data'].append(artDict)
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Article)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @put('/article')
 @post('/article')
@@ -667,7 +702,7 @@ def getArticle(id,db):
     try:
         article = db.query(Article).filter_by(id=id).first()
         stock = db.query(Stock).filter_by(article=article.id).first()
-        artDict = article_json(article)
+        artDict = article_json(db, article)
         if stock:
             artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
         return artDict
@@ -683,8 +718,9 @@ def deleteArticle(id,db):
     except:
         resource_not_found('Article')
 
-def article_json(article):
-  return { 'id': article.id,
+def article_json(db, article):
+  stock = db.query(Stock).filter_by(article=article.id).first()
+  artDict = { 'id': article.id,
      'article_type': article.article_type,
      'code': article.code,
      'name': article.name,
@@ -699,6 +735,9 @@ def article_json(article):
      'creator': article.creator,
      'supplier': article.supplier
      }
+  if stock:
+      artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
+  return artDict
 
 @put('/stock')
 @post('/stock')
@@ -743,10 +782,14 @@ def deleteStock(id,db):
 @get('/stocks')
 def getStocks(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     stocks = getDbObjects(db, Stock)
-    json_response = [ {'id': s.id,
+    json_response['data'] = [ {'id': s.id,
         'article': s.article,
         'quantity': s.quantity} for s in stocks ]
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Stock)
     return json.dumps(json_response,ensure_ascii=False)
 
 @put('/invoiceLine')
@@ -754,13 +797,17 @@ def getStocks(db):
 def addInvoiceLine(db):
     isValidUser(db,request)
     json_input = get_input_json(request)
-    invoice_line = InvoiceLine(article=json_input.get('article'),
+    invoice_line = InvoiceLine(article=json_input.get('article').get('id'),
             quantity=json_input.get('quantity'),
             unit_price=json_input.get('unit_price'),
             unit_discount=json_input.get('unit_discount'),
-            invoice=json_input.get('order_id'))
+            invoice=json_input.get('order_id'),
+            active=True,
+            apply_free=json_input.get('apply_free'))
     db.add(invoice_line)
-    adapt_stock(db, json_input.get('article'), json_input.get('quantity'))
+    db.flush()
+    adapt_stock(db, json_input.get('article').get('id'), json_input.get('quantity'))
+    return order_line_json(db, invoice_line)
 
 @post('/invoiceLine/:id')
 def updateInvoiceLine(id,db):
@@ -775,6 +822,8 @@ def updateInvoiceLine(id,db):
         if json_input.get('quantity') is not None: invoice_line.quantity=json_input.get('quantity')
         if json_input.get('unit_discount') is not None: invoice_line.unit_discount=json_input.get('unit_discount')
         if json_input.get('invoice') is not None: invoice_line.invoice=json_input.get('invoice')
+        if json_input.get('apply_free') is not None: invoice_line.apply_free=json_input.get('apply_free')
+        else: invoice_line.apply_free=True
         db.merge(invoice_line)
         adapt_stock(db, old_article_id, -old_quantity)
         adapt_stock(db, json_input.get('article').get('id'), json_input.get('quantity'))
@@ -805,20 +854,23 @@ def getInvoiceLine(id,db):
 @get('/invoiceLines')
 def getInvoiceLines(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     invoice_lines = getDbObjects(db, InvoiceLine)
     full_info = getFullInfo()
 
 
-    invoiceLinesJson = []
     if full_info:
       for invoice_line in invoice_lines:
           invDict = order_line_json(db, invoice_line)
-          invoiceLinesJson.append(invDict)
+          json_response['data'].append(invDict)
     else:
       for invoice_line in invoice_lines:
           invDict = { 'id': invoice_line.id}
-          invoiceLinesJson.append(invDict)
-    return json.dumps(invoiceLinesJson,ensure_ascii=False)
+          json_response['data'].append(invDict)
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, InvoiceLine)
+    return json.dumps(json_response,ensure_ascii=False)
 
 @delete('/invoiceLine/:id')
 def deleteInvoiceLine(id,db):
@@ -837,11 +889,12 @@ def order_line_json(db, invoice_line):
   art_object = { 'id': invoice_line.id,
      'quantity': invoice_line.quantity,
      'unit_discount': invoice_line.unit_discount,
-     'order_id': invoice_line.invoice
+     'order_id': invoice_line.invoice,
+     'apply_free': invoice_line.apply_free
      }
   if invoice_line.article:
     full_article = db.query(Article).filter(Article.id==invoice_line.article).order_by('id').first()
-    if full_article: art_object["article"] = article_json(full_article)
+    if full_article: art_object["article"] = article_json(db, full_article)
   return art_object
 
 @put('/invoice')
@@ -921,21 +974,24 @@ def getInvoice(id,db):
 @get('/invoices')
 def getInvoices(db):
     isValidUser(db,request)
+    json_response = getJsonContainer()
     invoices = getDbObjects(db, Invoice)
     full_info = getFullInfo()
 
 
-    invoicesJson = []
     if full_info:
       for invoice in invoices:
           customer = db.query(Customer).filter_by(id=invoice.customer).first()
           invDict = invoice_json(invoice, customer)
-          invoicesJson.append(invDict)
+          json_response['data'].append(invDict)
     else:
       for invoice in invoices:
           invDict = { 'id': invoice.id}
-          invoicesJson.append(invDict)
-    return json.dumps(invoicesJson,ensure_ascii=False)
+          json_response['data'].append(invDict)
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Invoice)
+    return json.dumps(json_response,ensure_ascii=False)
 
 def invoice_json(invoice, customer):
   invoice_json = {'id': invoice.id,
@@ -1037,9 +1093,32 @@ def getDbObjects(db, clazz):
   
   return objects
 
+def getCount(db, clazz):
+  isValidUser(db,request)
+  additional_condition = request.params.get('additionalCondition')
+  if request.params.get('includesNonActive') and request.params.get('includesNonActive')=='true':
+    includes_non_active = True
+  else:
+    includes_non_active = False
+
+
+  query = db.query(clazz)
+  if additional_condition and includes_non_active :
+    query = query.filter(additional_condition)
+  elif additional_condition and not includes_non_active :
+    query = query.filter(and_(clazz.active==1, additional_condition))
+  elif not includes_non_active :
+    query = query.filter(clazz.active==1)
+  else:
+    query = query.order_by("id")
+  return query.count()
+
 def getFullInfo():
   if request.params.get('fullInfo') and request.params.get('fullInfo')=='true':
     return True
   else:
     return False
+
+def getJsonContainer():
+  return {'info':{'count':-1},'data':[]}
 
