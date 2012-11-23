@@ -7,7 +7,7 @@ from sqlalchemy.exc import ProgrammingError
 import cleaner
 import model
 import settings
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, desc
 from model import User, Unit, ArticleType, Supplier, Sector, Person, Customer, Address, Article, Stock, InvoiceLine, Invoice
 
 @put('/user')
@@ -625,16 +625,26 @@ def address_json(address):
 @get('/articles')
 def getArticles(db):
     isValidUser(db,request)
-    articles = getDbObjects(db, Article)
+    #articles = getDbObjects(db, Article)
     full_info = getFullInfo()
 
     json_response = getJsonContainer()
+    query = getQuery(db, Article, Stock)
+
+    fromPos = request.params.get('from')
+    quantity = request.params.get('quantity')
+    paging = False
+    if fromPos and quantity:
+      paging=True
+    if paging:
+      articles = query.offset(fromPos).limit(quantity)
+    else:
+      articles = query.all()
+
+
     if full_info:
       for article in articles:
-          stock = db.query(Stock).filter_by(article=article.id).first()
-          artDict = article_json(db, article)
-          if stock:
-              artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
+          artDict = article_json(article[0], article[1])
           json_response['data'].append(artDict)
     else:
       for article in articles:
@@ -654,7 +664,7 @@ def addArticle(db):
     #user_id = getUserByUsername(username, db).id
     article = Article(article_type=json_input.get('article_type'),
             code=json_input.get('code'), name=json_input.get('name'),
-            description=json_input.get('description'),list_price=json_input.get('listPrice'),
+            description=json_input.get('description'),price=json_input.get('price'),
             free_quantity=json_input.get('freeQuantity'), copy_date=datetime.strptime(json_input.get("copyDate"),"%d/%m/%Y"),
             unit=json_input.get('unit'),supplier=json_input.get('supplier'),
             weight=json_input.get('weight'), create_date=datetime.now(),
@@ -673,7 +683,7 @@ def updateArticle(id,db):
         if json_input.get('code'): article.code=json_input.get('code')
         if json_input.get('name'): article.name=json_input.get('name')
         if json_input.get('description'): article.description=json_input.get('description')
-        if json_input.get('listPrice'): article.list_price=json_input.get('listPrice')
+        if json_input.get('price'): article.price=json_input.get('price')
         if json_input.get('freeQuantity'): article.free_quantity=json_input.get('freeQuantity')
         if json_input.get('unit'): article.unit=json_input.get('unit')
         if json_input.get('weight'): article.weight=json_input.get('weight')
@@ -718,14 +728,13 @@ def deleteArticle(id,db):
     except:
         resource_not_found('Article')
 
-def article_json(db, article):
-  stock = db.query(Stock).filter_by(article=article.id).first()
+def article_json(article, stock):
   artDict = { 'id': article.id,
      'article_type': article.article_type,
      'code': article.code,
      'name': article.name,
      'description': article.description,
-     'listPrice': article.list_price,
+     'price': article.price,
      'freeQuantity': article.free_quantity,
      'unit': article.unit,
      'weight': article.weight,
@@ -894,7 +903,7 @@ def order_line_json(db, invoice_line):
      }
   if invoice_line.article:
     full_article = db.query(Article).filter(Article.id==invoice_line.article).order_by('id').first()
-    if full_article: art_object["article"] = article_json(db, full_article)
+    if full_article: art_object["article"] = article_json(full_article, None)
   return art_object
 
 @put('/invoice')
@@ -943,6 +952,10 @@ def updateInvoice(id,db):
         if json_input.get("status"):invoice.status=json_input.get("status")
         if json_input.get("creator"):invoice.creator=json_input.get("creator")
         db.merge(invoice)
+    except ValueError as ve:
+        print ve
+    except Exception as ex:
+        print ex
     except:
         resource_not_found("Invoice")
 
@@ -975,14 +988,26 @@ def getInvoice(id,db):
 def getInvoices(db):
     isValidUser(db,request)
     json_response = getJsonContainer()
-    invoices = getDbObjects(db, Invoice)
+    query = getQuery(db, Invoice, Customer)
+
+    fromPos = request.params.get('from')
+    quantity = request.params.get('quantity')
+    paging = False
+    if fromPos and quantity:
+      paging=True
+    if paging:
+      invoices = query.offset(fromPos).limit(quantity)
+    else:
+      invoices = query.all()
+
+    #invoices = getDbObjects(db, Invoice)
     full_info = getFullInfo()
 
 
     if full_info:
       for invoice in invoices:
-          customer = db.query(Customer).filter_by(id=invoice.customer).first()
-          invDict = invoice_json(invoice, customer)
+          #customer = db.query(Customer).filter_by(id=invoice.customer).first()
+          invDict = invoice_json(invoice[0], invoice[1])
           json_response['data'].append(invDict)
     else:
       for invoice in invoices:
@@ -1007,7 +1032,7 @@ def invoice_json(invoice, customer):
                   'paid_date': str(invoice.paid_date),
                   'weight': invoice.weight,
                   'status': invoice.status,
-                  'creator': invoice.creator }
+                  'creator': invoice.creator}
   if customer:
       invoice_json['customer'] = {'id': customer.id, 'name': customer.name}
   return invoice_json
@@ -1064,7 +1089,14 @@ def getDbObjects(db, clazz):
   isValidUser(db,request)
   fromPos = request.params.get('from')
   quantity = request.params.get('quantity')
-  order_by = request.params.get('orderOn')
+  if request.params.get('orderOn') is not None:
+    order_by = request.params.get('orderOn')
+    if request.params.get('asc')=='true' or request.params.get('asc') is None:
+      asc = True
+    else:
+      asc = False
+  else:
+    order_by = None
   additional_condition = request.params.get('additionalCondition')
   if request.params.get('includesNonActive') and request.params.get('includesNonActive')=='true':
     includes_non_active = True
@@ -1082,8 +1114,10 @@ def getDbObjects(db, clazz):
     query = query.filter(and_(clazz.active==1, additional_condition))
   elif not includes_non_active :
     query = query.filter(clazz.active==1)
-  if order_by:
+  if order_by and asc:
     query = query.order_by(order_by)
+  elif order_by and not asc:
+    query = query.order_by(desc(order_by))
   else:
     query = query.order_by("id")
   if paging:
@@ -1092,6 +1126,44 @@ def getDbObjects(db, clazz):
     objects = query.all()
   
   return objects
+
+def getQuery(db, clazz, join_clazz):
+  isValidUser(db,request)
+  order_by = request.params.get('orderOn')
+  if order_by is not None and len(order_by) > 0:
+    if request.params.get('asc')=='true' or request.params.get('asc') is None:
+      asc = True
+    else:
+      asc = False
+    if '.' not in order_by:
+      order_by = clazz.__name__+'.'+order_by
+  else:
+    order_by = clazz.__name__+'.id'
+    asc = True
+  additional_condition = request.params.get('additionalCondition')
+  if request.params.get('includesNonActive') and request.params.get('includesNonActive')=='true':
+    includes_non_active = True
+  else:
+    includes_non_active = False
+
+
+  query = db.query(clazz, join_clazz)
+  if join_clazz is not None:
+    query = query.join(join_clazz)
+  if additional_condition and includes_non_active :
+    query = query.filter(additional_condition)
+  elif additional_condition and not includes_non_active :
+    query = query.filter(and_(clazz.active==1, additional_condition))
+  elif not includes_non_active :
+    query = query.filter(clazz.active==1)
+  if order_by and asc:
+    query = query.order_by(order_by)
+  elif order_by and not asc:
+    query = query.order_by(desc(order_by))
+  else:
+    query = query.order_by(clazz.__name__+".id")
+
+  return query
 
 def getCount(db, clazz):
   isValidUser(db,request)

@@ -128,12 +128,12 @@ def test_Article():
     user2 = userType_dict[1].get('id')
     noun = 'article'
     noun_dict = dict(code='aCode',name='aName',description='aDescription',
-            listPrice='54',weight=54,create_date='10/10/2011',vat='32',
+            price='54',weight=54,create_date='10/10/2011',vat='32',
             article_type=artType1,unit=unit1,creator=user1,supplier=supp1)
-    members = ['code','name','description','listPrice','weight','create_date',
+    members = ['code','name','description','price','weight','create_date',
             'vat', 'article_type','unit','creator','supplier']
     up_dict = dict(code='theCode',name='theName',description='theDescription',
-            listPrice='45',weight=42,create_date='11/11/2012',vat='23',
+            price='45',weight=42,create_date='11/11/2012',vat='23',
             article_type=artType2,unit=unit2,creator=user2,supplier=supp2)
     testNounCrudExt(noun,noun_dict,up_dict,members)
     #============================================

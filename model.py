@@ -74,7 +74,7 @@ class Article(MyMixin, Base):
     code = Column(String(50))
     name = Column(String(100))
     description = Column(String(500))
-    list_price = Column(Float)
+    price = Column(Float)
     weight = Column(Integer)
     create_date = Column(DateTime)
     copy_date = Column(Date)
@@ -88,11 +88,11 @@ class Article(MyMixin, Base):
     #active = Column(Boolean)
     free_quantity = Column(Integer)
 
-    def __init__(self, code, name, description, list_price, free_quantity, copy_date, weight, create_date, vat, article_type, unit, creator, supplier, active=True):
+    def __init__(self, code, name, description, price, free_quantity, copy_date, weight, create_date, vat, article_type, unit, creator, supplier, active=True):
         self.code = code
         self.name = name
         self.description = description
-        self.list_price = list_price
+        self.price = price
         self.weight = weight
         self.create_date = create_date
         self.vat = vat
