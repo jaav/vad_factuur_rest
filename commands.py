@@ -8,7 +8,7 @@ import cleaner
 import model
 import settings
 from sqlalchemy import or_, and_, desc
-from model import User, Unit, ArticleType, Supplier, Sector, Person, Customer, Address, Article, Stock, InvoiceLine, Invoice
+from model import User, Unit, ArticleType, Supplier, Sector, Person, Customer, Address, Article, Stock, InvoiceLine, Invoice, Post
 
 @put('/user')
 @post('/user')
@@ -113,6 +113,66 @@ def isValidUser(db,request):
 #            forbidden()
 #    except:
 #        forbidden()
+
+
+
+
+@put('/post')
+@post('/post')
+def setPost(db):
+    isValidUser(db,request)
+    json_input = get_input_json(request)
+    post = Post(name=json_input.get("name"), bottom=json_input.get("bottom"), top=json_input.get("top"), price=json_input.get("price"))
+    db.add(post)
+
+@post('/post/:id')
+def updatePost(id,db):
+    isValidUser(db,request)
+    try:
+        post = db.query(Post).filter_by(id=id).first()
+        json_input = get_input_json(request)
+        if json_input.get("name"): post.name = json_input.get("name")
+        if json_input.get("bottom"): post.bottom_weight = json_input.get("bottom")
+        if json_input.get("top"): post.top_weight = json_input.get("top")
+        if json_input.get("price"): post.price = json_input.get("price")
+        db.merge(post)
+    except:
+        resource_not_found( "Post not found")
+
+@get('/post/:id')
+def getPost(id,db):
+    isValidUser(db,request)
+    try:
+        post = db.query(Post).filter_by(id=id).first()
+        return {'id': post.id, 'name': post.name,
+                'bottom': post.bottom_weight, 'top': post.top_weight, 'price': post.price}
+    except:
+        resource_not_found( "Post")
+
+@get('/posts')
+def getPosts(db):
+    isValidUser(db,request)
+    json_response = getJsonContainer()
+    posts = getDbObjects(db, Post)
+    json_response['data'] = [ {'id': post.id, 'name': post.name,
+                               'bottom': post.bottom_weight, 'top': post.top_weight, 'price': post.price} for post in posts]
+    count = request.params.get('count')
+    if count is not None:
+      json_response['info']['count']=getCount(db, Post)
+    return json.dumps(json_response,ensure_ascii=False)
+
+@delete('/post/:id')
+def deletePost(id,db):
+    isValidUser(db,request)
+    try:
+        post = db.query(Post).filter_by(id=id).first()
+        soft_delete(db, post)
+    except:
+        resource_not_found("Post")
+
+
+
+
 
 @put('/unit')
 @post('/unit')
@@ -814,7 +874,7 @@ def addInvoiceLine(db):
             active=True,
             apply_free=json_input.get('apply_free'))
     db.add(invoice_line)
-    db.flush()
+    updateInvoiceData(db, json_input.get('order_id'))
     adapt_stock(db, json_input.get('article').get('id'), json_input.get('quantity'))
     return order_line_json(db, invoice_line)
 
@@ -834,6 +894,7 @@ def updateInvoiceLine(id,db):
         if json_input.get('apply_free') is not None: invoice_line.apply_free=json_input.get('apply_free')
         else: invoice_line.apply_free=True
         db.merge(invoice_line)
+        updateInvoiceData(db, json_input.get('order_id'))
         adapt_stock(db, old_article_id, -old_quantity)
         adapt_stock(db, json_input.get('article').get('id'), json_input.get('quantity'))
     except ProgrammingError as e:
@@ -888,7 +949,9 @@ def deleteInvoiceLine(id,db):
         invoice_line = db.query(InvoiceLine).filter_by(id=id).first()
         quantity = invoice_line.quantity
         article_id = invoice_line.article
+        order_id = invoice_line.invoice
         db.delete(invoice_line)
+        updateInvoiceData(db, order_id)
         adapt_stock(db, article_id, -quantity)
     except:
         resource_not_found("InvoiceLine")
@@ -906,6 +969,26 @@ def order_line_json(db, invoice_line):
     if full_article: art_object["article"] = article_json(full_article, None)
   return art_object
 
+def updateInvoiceData(db, order_id):
+  invoice = db.query(Invoice).filter_by(id=order_id).first()
+  prices = calculate_costs(db, invoice)
+  invoice.shipping = prices[1]
+  invoice.products = prices[0]
+  invoice.total = invoice.products+invoice.shipping
+  db.merge(invoice)
+
+def calculate_costs(db, invoice):
+  weight = 0
+  products = 0
+  for i in invoice.invoice_line:
+    article = db.query(Article).filter_by(id=i.article).first()
+    weight += (i.quantity*article.weight)
+    products += (i.quantity*article.price)
+  post = db.query(Post).filter(and_(Post.bottom_weight<weight, weight<Post.top_weight)).first()
+  return [products, post.price]
+
+
+
 @put('/invoice')
 @post('/invoice')
 def addInvoice(db):
@@ -917,6 +1000,7 @@ def addInvoice(db):
             code=json_input.get("code"),
             remark=json_input.get("remark"),
             shipping=json_input.get("shipping"),
+            products=json_input.get("products"),
             total=json_input.get("total"),
             vat=json_input.get("vat"),
             date=datetime.strptime(json_input.get("creation_date"),"%d/%m/%Y"),
@@ -943,6 +1027,7 @@ def updateInvoice(id,db):
         if json_input.get("code"):invoice.code=json_input.get("code")
         if json_input.get("remark"):invoice.remark=json_input.get("remark")
         if json_input.get("shipping"):invoice.shipping=json_input.get("shipping")
+        if json_input.get("products"):invoice.products=json_input.get("products")
         if json_input.get("total"):invoice.total=json_input.get("total")
         if json_input.get("vat"):invoice.vat=json_input.get("vat")
         if json_input.get("creation_date"):invoice.creation_date=datetime.strptime(json_input.get("creation_date"),"%d/%m/%Y")
@@ -1025,6 +1110,7 @@ def invoice_json(invoice, customer):
                   'code': invoice.code,
                   'remark': invoice.remark,
                   'shipping': invoice.shipping,
+                  'products': invoice.products,
                   'total': invoice.total,
                   'vat': invoice.vat,
                   'creation_date': str(invoice.creation_date),
@@ -1136,9 +1222,9 @@ def getQuery(db, clazz, join_clazz):
     else:
       asc = False
     if '.' not in order_by:
-      order_by = clazz.__name__+'.'+order_by
+      order_by = clazz.__name__.lower()+'.'+order_by
   else:
-    order_by = clazz.__name__+'.id'
+    order_by = clazz.__name__.lower()+'.id'
     asc = True
   additional_condition = request.params.get('additionalCondition')
   if request.params.get('includesNonActive') and request.params.get('includesNonActive')=='true':
@@ -1161,7 +1247,7 @@ def getQuery(db, clazz, join_clazz):
   elif order_by and not asc:
     query = query.order_by(desc(order_by))
   else:
-    query = query.order_by(clazz.__name__+".id")
+    query = query.order_by(clazz.__name__.lower()+".id")
 
   return query
 

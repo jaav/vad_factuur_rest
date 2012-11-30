@@ -38,7 +38,23 @@ class Unit(Base):
 
     def __init__(self, name):
         self.name = name
-        self.active=active
+        self.active=1
+
+
+class Post(MyMixin, Base):
+    __tablename__ = 'post'
+    bottom_weight = Column(Float)
+    top_weight = Column(Float)
+    price = Column(Float)
+    name = Column(String(100))
+
+    def __init__(self, name, bottom, top, price):
+        self.name=name
+        self.bottom_weight = bottom
+        self.top_weight=top
+        self.price=price
+        self.active = 1
+
 
 class Supplier(Base):
     __tablename__ = 'supplier'
@@ -212,6 +228,7 @@ class Invoice(MyMixin, Base):
     code = Column(String(100))
     remark = Column(String(300))
     shipping = Column(Float)
+    products = Column(Float)
     total = Column(Float)
     vat = Column(Float)
     creation_date = Column(DateTime)
@@ -225,13 +242,14 @@ class Invoice(MyMixin, Base):
     relationship("address",primaryjoin="address.id==invoice.inv_address")
     invoice_line = relationship("InvoiceLine")
 
-    def __init__(self, customer, inv_address, del_address, code, remark, shipping, total, vat, creation_date, delivery_date, paid_date, weight, status, creator, active=True):
+    def __init__(self, customer, inv_address, del_address, code, remark, shipping, products, total, vat, creation_date, delivery_date, paid_date, weight, status, creator, active=True):
         self.customer = customer
         self.inv_address = inv_address
         self.del_address = del_address
         self.code = code
         self.remark = remark
         self.shipping = shipping
+        self.products = products
         self.total = total
         self.vat = vat
         self.creation_date = creation_date
@@ -260,10 +278,19 @@ Base.metadata.create_all(engine)
 #ALTER TABLE supplier ADD COLUMN active BOOL DEFAULT true NOT NULL;
 #ALTER TABLE unit ADD COLUMN active BOOL DEFAULT true NOT NULL;
 #ALTER TABLE user ADD COLUMN active BOOL DEFAULT true NOT NULL;
-#
+
 #ALTER TABLE article ADD COLUMN free_quantity INT DEFAULT 0 NOT NULL;
 #ALTER TABLE article ADD COLUMN copy_date DATE AFTER create_date;
 
 #ALTER table person CHANGE mobile phone varchar(100);
 
 #ALTER TABLE invoice_line ADD COLUMN apply_free BOOL DEFAULT true NOT NULL;
+
+#alter table article change list_price price
+
+#ALTER TABLE invoice ADD COLUMN products FLOAT AFTER shipping;
+
+
+#update invoice set products = shipping;
+
+#update invoice set shipping = total-products;
