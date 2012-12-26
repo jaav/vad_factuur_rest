@@ -474,7 +474,7 @@ def getPersons(db):
           persDict = person_json(person)
           json_response['data'].append(persDict)
       if count is not None:
-        json_response['info']['count']=getCount(db, User)
+        json_response['info']['count']=getCount(db, Person)
       return json.dumps(json_response,ensure_ascii=False)
     else:
       json_response['data'] = [ { 'id': person.id } for person in persons]
@@ -510,8 +510,10 @@ def updateCustomer(id,db):
         if json_input.get('vat'): customer.vat = json_input.get('vat')
         if json_input.get('iban'): customer.iban = json_input.get('iban')
         if json_input.get('remark'): customer.remark = json_input.get('remark')
-        if json_input.get('sector'): customer.sector = json_input.get('sector')
-        if json_input.get('subsector'): customer.subsector = json_input.get('subsector')
+        if json_input.get('sector') and json_input.get('sector')>=0: customer.sector = json_input.get('sector')
+        elif json_input.get('sector'): customer.sector = None
+        if json_input.get('subsector') and json_input.get('subsector')>=0: customer.subsector = json_input.get('subsector')
+        elif json_input.get('subsector'): customer.subsector = None
         db.merge(customer)
     except:
         resource_not_found("Customer")
@@ -584,6 +586,33 @@ def getCustomers(db):
                        'remark': customer.remark,
                        'sector': customer.sector,
                        'subsector': customer.subsector }
+          addresses = db.query(Address).filter_by(customer=customer.id).all()
+          persons = db.query(Person).filter_by(customer=customer.id).all()
+          addressDictList = []
+          personDictList = []
+          for add in addresses:
+            if add.active:
+              address = {'id': add.id,
+                      'customer': add.customer,
+                      'address': add.address,
+                      'address_type': add.address_type,
+                      'zipcode': add.zipcode,
+                      'city': add.city,
+                      'tel': add.tel,
+                      'fax': add.fax,
+                      'email': add.email }
+              addressDictList.append(address)
+          for person in persons:
+            if person.active:
+              person =  {'id': person.id,
+                      'title': person.title,
+                      'name': person.name,
+                      'email': person.email,
+                      'phone': person.phone,
+                      'customer': person.customer }
+              personDictList.append(person)
+          custDict['person'] = personDictList
+          custDict['address'] = addressDictList
           json_response['data'].append(custDict)
       if count is not None:
         json_response['info']['count']=getCount(db, Customer)
@@ -730,6 +759,9 @@ def addArticle(db):
             weight=json_input.get('weight'), create_date=datetime.now(),
             vat=json_input.get('vat'),creator=user_id)
     db.add(article)
+    db.flush();
+    stock = Stock(0, article.id, True)
+    db.add(stock)
 
 @post('/article/:id')
 def updateArticle(id,db):
@@ -772,7 +804,7 @@ def getArticle(id,db):
     try:
         article = db.query(Article).filter_by(id=id).first()
         stock = db.query(Stock).filter_by(article=article.id).first()
-        artDict = article_json(db, article)
+        artDict = article_json(article, stock)
         if stock:
             artDict['stock'] = {'id': stock.id, 'quantity': stock.quantity}
         return artDict
@@ -994,7 +1026,7 @@ def calculate_costs(db, invoice):
 def addInvoice(db):
     isValidUser(db,request)
     json_input = get_input_json(request)
-    invoice = Invoice(customer=json_input.get('customer'),
+    invoice = Invoice(customer=None,
             inv_address=json_input.get("inv_address"),
             del_address=json_input.get("del_address"),
             code=json_input.get("code"),
@@ -1003,13 +1035,17 @@ def addInvoice(db):
             products=json_input.get("products"),
             total=json_input.get("total"),
             vat=json_input.get("vat"),
-            date=datetime.strptime(json_input.get("creation_date"),"%d/%m/%Y"),
+            creation_date=datetime.strptime(json_input.get("creation_date"),"%d/%m/%Y"),
             delivery_date=datetime.strptime(json_input.get("delivery_date"),"%d/%m/%Y"),
             paid_date=datetime.strptime(json_input.get("paid_date"),"%d/%m/%Y"),
             weight=json_input.get("weight"),
             status=json_input.get("status"),
-            creator=json_input.get("creator"),
+            creator=json_input.get("creator")
             )
+    if json_input.get('customer'):
+      customer_id = json_input.get('customer').get('id')
+      if customer_id:
+        invoice.customer=customer_id
     db.add(invoice)
 
 @post('/invoice/:id')

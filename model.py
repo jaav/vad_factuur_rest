@@ -128,6 +128,7 @@ class Stock(MyMixin, Base):
     def __init__(self, quantity, article, active=True):
         self.quantity = quantity
         self.article = article
+        self.active = active
 
 class Customer(MyMixin, Base):
     __tablename__ = 'customer'
