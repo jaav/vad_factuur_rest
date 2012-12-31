@@ -26,8 +26,8 @@ def updateUser(id,db):
         json_input = get_input_json(request)
         if json_input.get("name"): user.name = json_input.get("name")
         if json_input.get("username"): user.username = json_input.get("username")
-        if json_input.get("password"): user.password = hashlib.md5(json_input.get("password").encode("utf-8")).hexdigest()
         if json_input.get("role"): user.role = json_input.get("role")
+        if json_input.get("password"): user.addHash(json_input.get("password"))
         db.merge(user)
     except:
         resource_not_found( 'User not found')
@@ -85,6 +85,7 @@ def check(db,username,password):
         return None
     password = hashlib.md5(password.encode('utf-8')).hexdigest()
     try:
+
         user = db.query(User).filter(and_ (User.username==username,
                 User.password_hash==password)).first()
         if user:
@@ -575,9 +576,9 @@ def getCustomers(db):
     isValidUser(db,request)
     full_info = getFullInfo()
     json_response = getJsonContainer()
-    customers = getDbObjects(db, Customer)
     count = request.params.get('count')
     if full_info:
+      customers = getDbObjects(db, Customer)
       for customer in customers:
           custDict = { 'id': customer.id,
                        'name': customer.name,
@@ -618,9 +619,19 @@ def getCustomers(db):
         json_response['info']['count']=getCount(db, Customer)
       return json.dumps(json_response,ensure_ascii=False)
     else:
+      #customers = getDbObjects(db, Customer)
+      query = getQuery(db, Customer, Address)
+      customers = query.all()
+      for customer in customers:
+          custDict = { 'id': customer.Customer.id,
+                       'name': customer.Customer.name}
+          if customer.Address is not None:
+            custDict['name'] = custDict['name'] + ' (' + customer.Address.city + ')'
+          #address = addresses[0]
+            #custDict['name'] = custDict['name'] + ' (' + addresses[0].city + ')'
+          json_response['data'].append(custDict)
       if count is not None:
         json_response['info']['count']=getCount(db, Customer)
-      json_response['data'] = [{'id' : cust.id, 'name' : cust.name } for cust in customers]
       return json.dumps(json_response,ensure_ascii=False)
 
 #@get('/customersBySector/:id')
@@ -1132,10 +1143,10 @@ def getInvoices(db):
           json_response['data'].append(invDict)
     else:
       for invoice in invoices:
-          invDict = { 'id': invoice.id}
+          invDict = { 'id': invoice[0].id, 'code': invoice[0].code}
           json_response['data'].append(invDict)
     count = request.params.get('count')
-    if count is not None:
+    if count is not None and count is 'true':
       json_response['info']['count']=getCount(db, Invoice)
     return json.dumps(json_response,ensure_ascii=False)
 

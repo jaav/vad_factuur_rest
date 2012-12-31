@@ -84,6 +84,9 @@ class User(Base):
         self.role = role
         self.active=active
 
+    def addHash(self, password):
+        self.password_hash = hashlib.md5(password.encode("utf-8")).hexdigest()
+
 class Article(MyMixin, Base):
     __tablename__ = 'article'
     #id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
@@ -295,3 +298,7 @@ Base.metadata.create_all(engine)
 #update invoice set products = shipping;
 
 #update invoice set shipping = total-products;
+
+#de-activate all products having '******_*****' in their description
+#create a default supplier and add it as supplier to all products
+#create a default article_type and add it as type  to all products
