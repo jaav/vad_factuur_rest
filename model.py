@@ -2,8 +2,8 @@ import bottle
 import hashlib
 import settings
 from bottle.ext.sqlalchemy import SQLAlchemyPlugin
-from sqlalchemy import create_engine, Column, Integer, BigInteger,Sequence, String, ForeignKey, Float, DateTime, Boolean, Date
-from sqlalchemy.orm import relationship
+from sqlalchemy import create_engine, Column, Integer, Integer,Sequence, String, ForeignKey, Float, DateTime, Boolean, Date
+from sqlalchemy.orm import relationship, backref, relation
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.ext.declarative import declared_attr
 
@@ -20,7 +20,7 @@ class MyMixin(object):
 
 class ArticleType(Base):
     __tablename__ = 'article_type'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
+    id = Column(Integer, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     article = relationship("Article")
     active = Column(Boolean)
@@ -31,7 +31,7 @@ class ArticleType(Base):
 
 class Unit(Base):
     __tablename__ = 'unit'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
+    id = Column(Integer, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     article = relationship("Article")
     active = Column(Boolean)
@@ -58,7 +58,7 @@ class Post(MyMixin, Base):
 
 class Supplier(Base):
     __tablename__ = 'supplier'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
+    id = Column(Integer, Sequence('id_seq'), primary_key=True)
     name = Column(String(100))
     article = relationship("Article")
     active = Column(Boolean)
@@ -66,10 +66,32 @@ class Supplier(Base):
     def __init__(self, name, active=True):
         self.name = name
         self.active=active
+      
+
+
+class UpdateStatus(Base):
+    __tablename__ = 'update_status'
+    id = Column(Integer, Sequence('id_seq'), primary_key=True)
+    user = Column(Integer,ForeignKey("user.id"))
+    articles = Column(Boolean)
+    customers = Column(Boolean)
+
+    def __init__(self, user, articles, customers):
+        self.user = user.id
+        self.articles = articles
+        self.customers = customers
+      
+    def setRefreshArticles(self, user, articles):
+        self.user = user.id
+        self.articles = articles
+      
+    def setRefreshCustomers(self, user, customers):
+        self.user = user.id
+        self.customers = customers
 
 class User(Base):
     __tablename__ = 'user'
-    id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
+    id = Column(Integer, Sequence('id_seq'), primary_key=True)
     name = Column(String(200))
     username = Column(String(50))
     password_hash = Column(String(200))
@@ -89,7 +111,7 @@ class User(Base):
 
 class Article(MyMixin, Base):
     __tablename__ = 'article'
-    #id = Column(BigInteger, Sequence('id_seq'), primary_key=True)
+    #id = Column(Integer, Sequence('id_seq'), primary_key=True)
     code = Column(String(50))
     name = Column(String(100))
     description = Column(String(500))
@@ -98,10 +120,10 @@ class Article(MyMixin, Base):
     create_date = Column(DateTime)
     copy_date = Column(Date)
     vat = Column(Float)
-    article_type = Column(BigInteger,ForeignKey("article_type.id"))
-    unit = Column(BigInteger, ForeignKey("unit.id"))
-    creator = Column(BigInteger, ForeignKey("user.id")) 
-    supplier = Column(BigInteger, ForeignKey("supplier.id"))  
+    article_type = Column(Integer,ForeignKey("article_type.id"))
+    unit = Column(Integer, ForeignKey("unit.id"))
+    creator = Column(Integer, ForeignKey("user.id")) 
+    supplier = Column(Integer, ForeignKey("supplier.id"))  
     stock = relationship("Stock")
     invoice_line = relationship("InvoiceLine")
     #active = Column(Boolean)
@@ -126,7 +148,7 @@ class Article(MyMixin, Base):
 class Stock(MyMixin, Base):
     __tablename__ = 'stock'
     quantity = Column(Integer)
-    article = Column(BigInteger, ForeignKey("article.id"))
+    article = Column(Integer, ForeignKey("article.id"))
 
     def __init__(self, quantity, article, active=True):
         self.quantity = quantity
@@ -139,10 +161,12 @@ class Customer(MyMixin, Base):
     vat = Column(String(20))
     iban = Column(String(100))
     remark = Column(String(100))
-    person = relationship("Person")
-    address = relationship("Address")
-    sector = Column(BigInteger, ForeignKey("sector.id"))
-    subsector = Column(BigInteger, ForeignKey("sector.id"))
+    persons = relationship("Person", backref="Customer")
+    addresses = relationship("Address", backref="Customer")
+#    person = relationship("Person")
+#    address = relationship("Address")
+    sector = Column(Integer, ForeignKey("sector.id"))
+    subsector = Column(Integer, ForeignKey("sector.id"))
     relationship("sector",primaryjoin="sector.id==customer.sector")
     relationship("sector",primaryjoin="sector.id==customer.subsector")
 
@@ -161,7 +185,9 @@ class Person(MyMixin, Base):
     name = Column(String(100))
     email = Column(String(100))
     phone = Column(String(100))
-    customer = Column(BigInteger, ForeignKey("customer.id"))
+    customer = Column(Integer, ForeignKey('customer.id'))
+    customer_rel = relationship("Customer", primaryjoin="Person.customer==Customer.id")
+#    customer = Column(Integer, ForeignKey("customer.id"))
 
     def __init__(self, name, title, email, phone, customer, active=True):
         self.name = name
@@ -174,7 +200,8 @@ class Person(MyMixin, Base):
 class Sector(MyMixin, Base):
     __tablename__ = 'sector'
     name = Column(String(100))
-    parent = Column(BigInteger, ForeignKey("sector.id"))
+    parent = Column(Integer, ForeignKey("sector.id"))
+#    parent_rel = relation('Sector')
     children = relationship("Sector")
 
     def __init__(self, name, parent, active=True):
@@ -184,12 +211,12 @@ class Sector(MyMixin, Base):
 
 class InvoiceLine(MyMixin, Base):
     __tablename__ = 'invoice_line'
-    article = Column(BigInteger, ForeignKey("article.id"))
+    article = Column(Integer, ForeignKey("article.id"))
     quantity = Column(Integer)
     weight = Column(Float)
     unit_price = Column(Float)
     unit_discount = Column(Float)
-    invoice = Column(BigInteger, ForeignKey("invoice.id"))
+    invoice = Column(Integer, ForeignKey("invoice.id"))
     apply_free = Column(Boolean)
 
     def __init(self, article, quantity, unit_price, unit_discount, invoice, active=True, apply_free=True):
@@ -204,31 +231,36 @@ class InvoiceLine(MyMixin, Base):
 
 class Address(MyMixin, Base):
     __tablename__ = 'address'
-    customer = Column(BigInteger, ForeignKey("customer.id"))
+
+    customer = Column(Integer, ForeignKey('customer.id'))
+    customer_rel = relationship("Customer", primaryjoin="Customer.id==Address.customer")
+#    customer = Column(Integer, ForeignKey("customer.id"))
     address_type = Column(Integer)
-    address = Column(String(500))
+    street = Column(String(500))
     zipcode = Column(String(20))
     city = Column(String(500))
     tel = Column(String(20))
     fax = Column(String(20))
     email = Column(String(200))
+    att = Column(String(200))
 
-    def __init__(self, customer, address_type, address, zipcode, city, tel, fax, email, active=True):
+    def __init__(self, customer, address_type, street, zipcode, city, tel, fax, email, att, active=True):
         self.customer = customer
         self.address_type = address_type
-        self.address = address
+        self.street = street
         self.zipcode = zipcode
         self.city = city
         self.tel = tel
         self.fax = fax
         self.email = email
+        self.att = att
         self.active=active
 
 class Invoice(MyMixin, Base):
     __tablename__ = 'invoice'
-    customer = Column(BigInteger, ForeignKey("customer.id"))
-    inv_address = Column(BigInteger, ForeignKey("address.id"))
-    del_address = Column(BigInteger, ForeignKey("address.id"))
+    customer = Column(Integer, ForeignKey("customer.id"))
+    inv_address = Column(Integer, ForeignKey("address.id"))
+    del_address = Column(Integer, ForeignKey("address.id"))
     code = Column(String(100))
     remark = Column(String(300))
     shipping = Column(Float)
@@ -241,7 +273,7 @@ class Invoice(MyMixin, Base):
     paid_date = Column(DateTime)
     weight = Column(Float)
     status = Column(Integer)
-    creator = Column(BigInteger, ForeignKey("user.id"))
+    creator = Column(Integer, ForeignKey("user.id"))
     relationship("address",primaryjoin="address.id==invoice.del_address")
     relationship("address",primaryjoin="address.id==invoice.inv_address")
     invoice_line = relationship("InvoiceLine")
@@ -302,3 +334,7 @@ Base.metadata.create_all(engine)
 #de-activate all products having '******_*****' in their description
 #create a default supplier and add it as supplier to all products
 #create a default article_type and add it as type  to all products
+
+#ALTER TABLE address ADD COLUMN att VARCHAR(200);
+
+#alter table address change address street

@@ -115,6 +115,22 @@ def isValidUser(db,request):
 #    except:
 #        forbidden()
 
+@get('/shouldRefresh')
+def shouldRefresh(db):
+  username = request.params.get('username')
+  user = db.query(User).filter_by(username=username).first()
+  update_status = db.query(model.UpdateStatus).filter_by(user=user.id).first()
+  return {'articles':update_status.articles, 'customers':update_status.customers}
+
+@get('/resetStatuses')
+def resetAllStatuses(db):
+   statuses = db.query(model.UpdateStatus)
+   for status in statuses:
+     db.delete(status)
+   users = db.query(User)
+   for user in users:
+     status = model.UpdateStatus(user, True, True)
+     db.add(status)
 
 
 
@@ -539,13 +555,14 @@ def getCustomer(id,db):
           if add.active:
             address = {'id': add.id,
                     'customer': add.customer,
-                    'address': add.address,
+                    'address': add.street,
                     'address_type': add.address_type,
                     'zipcode': add.zipcode,
                     'city': add.city,
                     'tel': add.tel,
                     'fax': add.fax,
-                    'email': add.email }
+                    'email': add.email,
+                    'att': add.att}
             addressDictList.append(address)
         for person in persons:
           if person.active:
@@ -571,6 +588,30 @@ def deleteCustomer(id,db):
     except:
         resource_not_found("Customer")
 
+@get('/allCustomers')
+def getAllCustomers(db):
+    isValidUser(db,request)
+    json_response = getJsonContainer()
+    query = '''
+    SELECT customer.id AS customer_id, customer.name AS customer_name, address.city AS address_city
+    FROM customer LEFT OUTER JOIN address ON customer.id = address.customer
+    WHERE customer.active = 1 ORDER BY customer.name
+    '''
+
+    result = db.execute(query)
+    prev_id = 0
+    for row in result:
+        if row.customer_id != prev_id:
+          prev_id = row.customer_id
+          custDict = { 'id': row.customer_id,
+                       'name': row.customer_name}
+          if row.address_city is not None:
+            custDict['name'] = custDict['name'] + ' (' + row.address_city + ')'
+          json_response['data'].append(custDict)
+
+    return json.dumps(json_response,ensure_ascii=False)
+
+
 @get('/customers')
 def getCustomers(db):
     isValidUser(db,request)
@@ -578,7 +619,17 @@ def getCustomers(db):
     json_response = getJsonContainer()
     count = request.params.get('count')
     if full_info:
-      customers = getDbObjects(db, Customer)
+      query = getQuery(db, Customer, None)
+
+      fromPos = request.params.get('from')
+      quantity = request.params.get('quantity')
+      paging = False
+      if fromPos and quantity:
+        paging=True
+      if paging:
+        customers = query.offset(fromPos).limit(quantity)
+      else:
+        customers = query.all()
       for customer in customers:
           custDict = { 'id': customer.id,
                        'name': customer.name,
@@ -587,23 +638,22 @@ def getCustomers(db):
                        'remark': customer.remark,
                        'sector': customer.sector,
                        'subsector': customer.subsector }
-          addresses = db.query(Address).filter_by(customer=customer.id).all()
-          persons = db.query(Person).filter_by(customer=customer.id).all()
           addressDictList = []
           personDictList = []
-          for add in addresses:
+          for add in customer.addresses:
             if add.active:
               address = {'id': add.id,
                       'customer': add.customer,
-                      'address': add.address,
+                      'address': add.street,
                       'address_type': add.address_type,
                       'zipcode': add.zipcode,
                       'city': add.city,
                       'tel': add.tel,
                       'fax': add.fax,
-                      'email': add.email }
+                      'email': add.email,
+                      'att': add.att }
               addressDictList.append(address)
-          for person in persons:
+          for person in customer.persons:
             if person.active:
               person =  {'id': person.id,
                       'title': person.title,
@@ -649,10 +699,10 @@ def getCustomers(db):
 def addAddress(db):
     isValidUser(db,request)
     json_input = get_input_json(request)
-    address = Address(customer=json_input.get('customer'),address=json_input.get('address'),
+    address = Address(customer=json_input.get('customer'),street=json_input.get('address'),
             address_type=json_input.get('address_type'),zipcode=json_input.get('zipcode'),
             city=json_input.get('city'),tel=json_input.get('tel'),fax=json_input.get('fax'),
-            email=json_input.get('email'))
+            email=json_input.get('email'), att=json_input.get('att'))
     db.add(address)
 
 @post('/address/:id')
@@ -663,12 +713,13 @@ def updateAddress(id,db):
         address = db.query(Address).filter_by(id=id).first()
         if json_input.get('customer'): address.customer = json_input.get('customer')
         if json_input.get('address_type'): address.address_type = json_input.get('address_type')
-        if json_input.get('address'): address.address = json_input.get('address')
+        if json_input.get('address'): address.street = json_input.get('address')
         if json_input.get('zipcode'): address.zipcode = json_input.get('zipcode')
         if json_input.get('city'): address.city = json_input.get('city')
         if json_input.get('tel'): address.tel = json_input.get('tel')
         if json_input.get('fax'): address.fax = json_input.get('fax')
         if json_input.get('email'): address.email = json_input.get('email')
+        if json_input.get('att'): address.att = json_input.get('att')
         db.merge(address)
     except:
         resource_not_found("Address")
@@ -713,13 +764,42 @@ def deleteAddress(id,db):
 def address_json(address):
   return {'id': address.id,
           'customer': address.customer,
-          'address': address.address,
+          'address': address.street,
           'address_type': address.address_type,
           'zipcode': address.zipcode,
           'city': address.city,
           'tel': address.tel,
           'fax': address.fax,
-          'email': address.email }
+          'email': address.email,
+          'att': address.att}
+
+
+
+@get('/allArticles')
+def getAllArticles(db):
+    isValidUser(db,request)
+    json_response = getJsonContainer()
+    query = '''
+    SELECT id , code, name, price, free_quantity, vat
+    FROM article
+    WHERE active = 1 ORDER BY code
+    '''
+
+    result = db.execute(query)
+    prev_id = 0
+    for row in result:
+        if row.id != prev_id:
+          prev_id = row.id
+          artDict = { 'id': row.id,
+                       'name': row.name,
+                       'code': row.code,
+                       'freeQuantity': row.free_quantity,
+                       'vat': row.vat,
+                       'price': row.price
+          }
+          json_response['data'].append(artDict)
+
+    return json.dumps(json_response,ensure_ascii=False)
 
 
 @get('/articles')
@@ -748,7 +828,7 @@ def getArticles(db):
           json_response['data'].append(artDict)
     else:
       for article in articles:
-          artDict = { 'id': article.id,'name': article.name}
+          artDict = { 'id': article[0].id,'name': article[0].name}
           json_response['data'].append(artDict)
     count = request.params.get('count')
     if count is not None:
@@ -761,11 +841,13 @@ def addArticle(db):
     isValidUser(db,request)
     json_input = get_input_json(request)
     user_id = json_input.get('creator')
+    if json_input.get("copyDate") is None: copy_date_value = ''
+    else: copy_date_value = datetime.strptime(json_input.get("copyDate"),"%d/%m/%Y")
     #user_id = getUserByUsername(username, db).id
     article = Article(article_type=json_input.get('article_type'),
             code=json_input.get('code'), name=json_input.get('name'),
             description=json_input.get('description'),price=json_input.get('price'),
-            free_quantity=json_input.get('freeQuantity'), copy_date=datetime.strptime(json_input.get("copyDate"),"%d/%m/%Y"),
+            free_quantity=json_input.get('freeQuantity'), copy_date=copy_date_value,
             unit=json_input.get('unit'),supplier=json_input.get('supplier'),
             weight=json_input.get('weight'), create_date=datetime.now(),
             vat=json_input.get('vat'),creator=user_id)
@@ -1026,7 +1108,12 @@ def calculate_costs(db, invoice):
   for i in invoice.invoice_line:
     article = db.query(Article).filter_by(id=i.article).first()
     weight += (i.quantity*article.weight)
-    products += (i.quantity*article.price)
+    if i.apply_free and article.free_quantity is not None:
+      new_quantity = i.quantity - article.free_quantity
+      if new_quantity < 0: new_quantity = 0
+    else:
+      new_quantity = i.quantity
+    products += (new_quantity*article.price)
   post = db.query(Post).filter(and_(Post.bottom_weight<weight, weight<Post.top_weight)).first()
   return [products, post.price]
 
@@ -1214,6 +1301,8 @@ def initdb(db):
 
 def adapt_stock(db, article_id, quantity):
   stock = db.query(Stock).filter_by(id=article_id).first()
+  if stock is None:
+    stock = Stock(0, article_id, True)
   if quantity:
     stock.quantity -= quantity
     db.merge(stock)
@@ -1280,8 +1369,10 @@ def getQuery(db, clazz, join_clazz):
     includes_non_active = False
 
 
-  query = db.query(clazz, join_clazz)
-  if join_clazz is not None:
+  if join_clazz is None:
+    query = db.query(clazz)
+  else:
+    query = db.query(clazz, join_clazz)
     query = query.join(join_clazz)
   if additional_condition and includes_non_active :
     query = query.filter(additional_condition)
