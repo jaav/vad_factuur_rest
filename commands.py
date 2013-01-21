@@ -115,22 +115,22 @@ def isValidUser(db,request):
 #    except:
 #        forbidden()
 
-@get('/shouldRefresh')
-def shouldRefresh(db):
-  username = request.params.get('username')
-  user = db.query(User).filter_by(username=username).first()
-  update_status = db.query(model.UpdateStatus).filter_by(user=user.id).first()
-  return {'articles':update_status.articles, 'customers':update_status.customers}
-
-@get('/resetStatuses')
-def resetAllStatuses(db):
-   statuses = db.query(model.UpdateStatus)
-   for status in statuses:
-     db.delete(status)
-   users = db.query(User)
-   for user in users:
-     status = model.UpdateStatus(user, True, True)
-     db.add(status)
+#@get('/shouldRefresh')
+#def shouldRefresh(db):
+#  username = request.params.get('username')
+#  user = db.query(User).filter_by(username=username).first()
+#  update_status = db.query(model.UpdateStatus).filter_by(user=user.id).first()
+#  return {'articles':update_status.articles, 'customers':update_status.customers}
+#
+#@get('/resetStatuses')
+#def resetAllStatuses(db):
+#   statuses = db.query(model.UpdateStatus)
+#   for status in statuses:
+#     db.delete(status)
+#   users = db.query(User)
+#   for user in users:
+#     status = model.UpdateStatus(user, True, True)
+#     db.add(status)
 
 
 
@@ -149,9 +149,9 @@ def updatePost(id,db):
         post = db.query(Post).filter_by(id=id).first()
         json_input = get_input_json(request)
         if json_input.get("name"): post.name = json_input.get("name")
-        if json_input.get("bottom"): post.bottom_weight = json_input.get("bottom")
-        if json_input.get("top"): post.top_weight = json_input.get("top")
-        if json_input.get("price"): post.price = json_input.get("price")
+        if json_input.get("bottom") is not None: post.bottom_weight = json_input.get("bottom")
+        if json_input.get("top") is not None: post.top_weight = json_input.get("top")
+        if json_input.get("price") is not None: post.price = json_input.get("price")
         db.merge(post)
     except:
         resource_not_found( "Post not found")
@@ -358,7 +358,7 @@ def updateSector(id, db):
         json_input = get_input_json(request)
         sector = db.query(Sector).filter_by(id=id).first()
         if json_input.get('name'): sector.name = json_input.get('name')
-        if json_input.get('parent'): sector.parent = json_input.get('parent')
+        if json_input.get('parent') is not None: sector.parent = json_input.get('parent')
         db.merge(sector)
     except:
         resource_not_found("Sector")
@@ -864,19 +864,19 @@ def updateArticle(id,db):
         user_id = json_input.get('creator')
         #user_id = getUserByUsername(username, db).id
         article = db.query(Article).filter_by(id=id).first()
-        if json_input.get('article_type'): article.article_type=json_input.get('article_type')
-        if json_input.get('code'): article.code=json_input.get('code')
-        if json_input.get('name'): article.name=json_input.get('name')
-        if json_input.get('description'): article.description=json_input.get('description')
-        if json_input.get('price'): article.price=json_input.get('price')
-        if json_input.get('freeQuantity'): article.free_quantity=json_input.get('freeQuantity')
-        if json_input.get('unit'): article.unit=json_input.get('unit')
-        if json_input.get('weight'): article.weight=json_input.get('weight')
-        if json_input.get('create_date'): article.create_date=datetime.strptime(json_input.get('create_date'), "%d/%m/%Y")
-        if json_input.get('copyDate'): article.copy_date=datetime.strptime(json_input.get('copyDate'), "%d/%m/%Y")
-        if json_input.get('vat'): article.vat=json_input.get('vat')
+        if json_input.get('article_type') is not None: article.article_type=json_input.get('article_type')
+        if json_input.get('code') is not None: article.code=json_input.get('code')
+        if json_input.get('name') is not None: article.name=json_input.get('name')
+        if json_input.get('description') is not None: article.description=json_input.get('description')
+        if json_input.get('price') is not None: article.price=json_input.get('price')
+        if json_input.get('freeQuantity') is not None: article.free_quantity=json_input.get('freeQuantity')
+        if json_input.get('unit') is not None: article.unit=json_input.get('unit')
+        if json_input.get('weight') is not None: article.weight=json_input.get('weight')
+        if json_input.get('create_date') is not None: article.create_date=datetime.strptime(json_input.get('create_date'), "%d/%m/%Y")
+        if json_input.get('copyDate') is not None: article.copy_date=datetime.strptime(json_input.get('copyDate'), "%d/%m/%Y")
+        if json_input.get('vat') is not None: article.vat=json_input.get('vat')
         if user_id: article.creator=user_id
-        if json_input.get('supplier'): article.supplier=json_input.get('supplier')
+        if json_input.get('supplier') is not None: article.supplier=json_input.get('supplier')
         db.merge(article)
     except:
         resource_not_found("Article")
@@ -1160,15 +1160,15 @@ def updateInvoice(id,db):
         if json_input.get("del_address"):invoice.del_address=json_input.get("del_address")
         if json_input.get("code"):invoice.code=json_input.get("code")
         if json_input.get("remark"):invoice.remark=json_input.get("remark")
-        if json_input.get("shipping"):invoice.shipping=json_input.get("shipping")
-        if json_input.get("products"):invoice.products=json_input.get("products")
-        if json_input.get("total"):invoice.total=json_input.get("total")
+        if json_input.get("shipping") is not None:invoice.shipping=json_input.get("shipping")
+        if json_input.get("products") is not None:invoice.products=json_input.get("products")
+        if json_input.get("total") is not None:invoice.total=json_input.get("total")
         if json_input.get("vat"):invoice.vat=json_input.get("vat")
         if json_input.get("creation_date"):invoice.creation_date=datetime.strptime(json_input.get("creation_date"),"%d/%m/%Y")
         if json_input.get("delivery_date"):invoice.delivery_date=datetime.strptime(json_input.get("delivery_date"),"%d/%m/%Y")
         if json_input.get("paid_date"):invoice.paid_date=datetime.strptime(json_input.get("paid_date"),"%d/%m/%Y")
-        if json_input.get("weight"):invoice.weight=json_input.get("weight")
-        if json_input.get("status"):invoice.status=json_input.get("status")
+        if json_input.get("weight") is not None:invoice.weight=json_input.get("weight")
+        if json_input.get("status") is not None:invoice.status=json_input.get("status")
         if json_input.get("creator"):invoice.creator=json_input.get("creator")
         db.merge(invoice)
     except ValueError as ve:

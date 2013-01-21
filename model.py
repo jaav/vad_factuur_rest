@@ -69,25 +69,25 @@ class Supplier(Base):
       
 
 
-class UpdateStatus(Base):
-    __tablename__ = 'update_status'
-    id = Column(Integer, Sequence('id_seq'), primary_key=True)
-    user = Column(Integer,ForeignKey("user.id"))
-    articles = Column(Boolean)
-    customers = Column(Boolean)
-
-    def __init__(self, user, articles, customers):
-        self.user = user.id
-        self.articles = articles
-        self.customers = customers
-      
-    def setRefreshArticles(self, user, articles):
-        self.user = user.id
-        self.articles = articles
-      
-    def setRefreshCustomers(self, user, customers):
-        self.user = user.id
-        self.customers = customers
+#class UpdateStatus(Base):
+#    __tablename__ = 'update_status'
+#    id = Column(Integer, Sequence('id_seq'), primary_key=True)
+#    user = Column(Integer,ForeignKey("user.id"))
+#    articles = Column(Boolean)
+#    customers = Column(Boolean)
+#
+#    def __init__(self, user, articles, customers):
+#        self.user = user.id
+#        self.articles = articles
+#        self.customers = customers
+#
+#    def setRefreshArticles(self, user, articles):
+#        self.user = user.id
+#        self.articles = articles
+#
+#    def setRefreshCustomers(self, user, customers):
+#        self.user = user.id
+#        self.customers = customers
 
 class User(Base):
     __tablename__ = 'user'
