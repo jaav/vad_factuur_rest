@@ -1113,7 +1113,10 @@ def calculate_costs(db, invoice):
       if new_quantity < 0: new_quantity = 0
     else:
       new_quantity = i.quantity
-    products += (new_quantity*(article.price - i.unit_discount))
+    if i.unit_discount is not None:
+      products += (new_quantity*(article.price - i.unit_discount))
+    else:
+      products += (new_quantity*article.price)
   post = db.query(Post).filter(and_(Post.bottom_weight<weight, weight<Post.top_weight)).first()
   return [products, post.price]
 
