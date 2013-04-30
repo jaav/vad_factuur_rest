@@ -597,7 +597,6 @@ def getAllCustomers(db):
     FROM customer LEFT OUTER JOIN address ON customer.id = address.customer
     WHERE customer.active = 1 ORDER BY customer.name
     '''
-
     result = db.execute(query)
     prev_id = 0
     for row in result:
@@ -1075,7 +1074,7 @@ def deleteInvoiceLine(id,db):
         quantity = invoice_line.quantity
         article_id = invoice_line.article
         order_id = invoice_line.invoice
-        db.delete(invoice_line)
+        soft_delete(db, invoice_line)
         updateInvoiceData(db, order_id)
         adapt_stock(db, article_id, -quantity)
     except:
@@ -1240,6 +1239,57 @@ def getInvoices(db):
       json_response['info']['count']=getCount(db, Invoice)
     return json.dumps(json_response,ensure_ascii=False)
 
+#@get('/invoices')
+#def getInvoices(db):
+#    isValidUser(db,request)
+#    invoices = db.query(Invoice)
+#    return json.dumps([ {'id': i.id, } for i in invoices],ensure_ascii=False)
+
+#@get('/stats')
+#def getStats(db):
+#    isValidUser(db,request)
+#    json_response = getJsonContainer()
+#    query = getStatsQuery(db)
+#    invoices = query.all()
+#    for invoice in invoices:
+#        invDict = stats_json(invoice[0], invoice[1])
+#        json_response['data'].append(invDict)
+#    return json.dumps(json_response,ensure_ascii=False)
+
+
+@get('/stats')
+def getStats(db):
+    isValidUser(db,request)
+    fromDate = request.params.get('from')
+    tillDate = request.params.get('till')
+    article_id = request.params.get('article_id')
+    json_response = getJsonContainer()
+    query = '''
+    select i.creation_date, i.code, a.name, a.code, a.price, il.quantity, il.unit_discount, i.total from invoice i
+    join invoice_line il on i.id=il.invoice
+    join article a on a.id=il.article
+    where i.creation_date > \''''+fromDate+'''\'
+    and i.creation_date < \''''+tillDate+'''\'
+    and a.id = \''''+article_id+'''\'
+    order by i.id desc;
+    '''
+
+    result = db.execute(query)
+    prev_id = 0
+    for row in result:
+          custDict = { 'date': str(row[0]),
+                 'invoice': row[1],
+                 'article': row[2],
+                 'code': row[3],
+                 'price': row[4],
+                 'quantity': row[5],
+                 'discount': row[6],
+                 'total': row[7]}
+          json_response['data'].append(custDict)
+
+    return json.dumps(json_response,ensure_ascii=False)
+
+
 def invoice_json(invoice, customer):
   invoice_json = {'id': invoice.id,
                   'inv_address': invoice.inv_address,
@@ -1258,6 +1308,17 @@ def invoice_json(invoice, customer):
                   'creator': invoice.creator}
   if customer:
       invoice_json['customer'] = {'id': customer.id, 'name': customer.name}
+  return invoice_json
+
+def stats_json(invoice, invoice_line):
+  invoice_json = {'id': invoice.id,
+                  'total': invoice.total,
+                  'creation_date': str(invoice.creation_date),
+                  'delivery_date': str(invoice.delivery_date),
+                  'paid_date': str(invoice.paid_date),
+                  'status': invoice.status}
+  if invoice_line:
+      invoice_json['article'] = {'id': invoice_line.id, 'name': invoice_line.article}
   return invoice_json
 
 
@@ -1390,6 +1451,14 @@ def getQuery(db, clazz, join_clazz):
   else:
     query = query.order_by(clazz.__name__.lower()+".id")
 
+  return query
+
+
+def getStatsQuery(db):
+  isValidUser(db,request)
+  query = db.query(Invoice, InvoiceLine)
+  query = query.join(InvoiceLine)
+  query = query.order_by(Invoice.id)
   return query
 
 def getCount(db, clazz):
