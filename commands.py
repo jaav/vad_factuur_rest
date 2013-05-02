@@ -1265,9 +1265,10 @@ def getStats(db):
     article_id = request.params.get('article_id')
     json_response = getJsonContainer()
     query = '''
-    select i.creation_date, i.code, a.name, a.code, a.price, il.quantity, il.unit_discount, i.total from invoice i
+    select i.creation_date, i.code, a.name, a.code, a.price, il.quantity, il.unit_discount, i.total, c.name from invoice i
     join invoice_line il on i.id=il.invoice
     join article a on a.id=il.article
+    join customer c on c.id=i.customer
     where i.creation_date > \''''+fromDate+'''\'
     and i.creation_date < \''''+tillDate+'''\'
     and a.id = \''''+article_id+'''\'
@@ -1284,7 +1285,8 @@ def getStats(db):
                  'price': row[4],
                  'quantity': row[5],
                  'discount': row[6],
-                 'total': row[7]}
+                 'total': row[7],
+                 'customer': row[8]}
           json_response['data'].append(custDict)
 
     return json.dumps(json_response,ensure_ascii=False)
