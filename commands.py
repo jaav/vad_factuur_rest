@@ -1339,7 +1339,8 @@ def get_input_json(http_request):
 
 def soft_delete(db, dbObject):
   dbObject.active = False
-  db.merge(dbObject)
+  #db.merge(dbObject)
+  db.delete(dbObject)
 
 @get('/initdb')
 def initdb(db):
