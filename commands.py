@@ -1105,17 +1105,18 @@ def calculate_costs(db, invoice):
   weight = 0
   products = 0
   for i in invoice.invoice_line:
-    article = db.query(Article).filter_by(id=i.article).first()
-    weight += (i.quantity*article.weight)
-    if i.apply_free and article.free_quantity is not None:
-      new_quantity = i.quantity - article.free_quantity
-      if new_quantity < 0: new_quantity = 0
-    else:
-      new_quantity = i.quantity
-    if i.unit_discount is not None:
-      products += (new_quantity*(article.price - i.unit_discount))
-    else:
-      products += (new_quantity*article.price)
+    if i.active:
+      article = db.query(Article).filter_by(id=i.article).first()
+      weight += (i.quantity*article.weight)
+      if i.apply_free and article.free_quantity is not None:
+        new_quantity = i.quantity - article.free_quantity
+        if new_quantity < 0: new_quantity = 0
+      else:
+        new_quantity = i.quantity
+      if i.unit_discount is not None:
+        products += (new_quantity*(article.price - i.unit_discount))
+      else:
+        products += (new_quantity*article.price)
   post = db.query(Post).filter(and_(Post.bottom_weight<weight, weight<Post.top_weight)).first()
   return [products, post.price]
 
