@@ -947,7 +947,7 @@ def updateStock(id,db):
         json_input = get_input_json(request)
         stock = db.query(Stock).filter_by(id=id).first()
         if json_input.get('article'): stock.article = json_input.get('article')
-        if json_input.get('quantity'): stock.quantity = json_input.get('quantity')
+        if json_input.get('quantity') is not None: stock.quantity = json_input.get('quantity')
         db.merge(stock)
     except:
         resource_not_found("Stock")
@@ -1340,8 +1340,8 @@ def get_input_json(http_request):
 
 def soft_delete(db, dbObject):
   dbObject.active = False
-  #db.merge(dbObject)
-  db.delete(dbObject)
+  db.merge(dbObject)
+  #db.delete(dbObject)
 
 @get('/initdb')
 def initdb(db):
@@ -1368,10 +1368,12 @@ def initdb(db):
 #        return None
 
 def adapt_stock(db, article_id, quantity):
-  stock = db.query(Stock).filter_by(id=article_id).first()
+  stock = db.query(Stock).filter_by(article=article_id).first()
   if stock is None:
     stock = Stock(0, article_id, True)
+    print('Creating new stock line for '+str(article_id))
   if quantity:
+    print('Found stock, now removing '+str(quantity)+' from '+str(article_id)+' - '+str(stock.quantity))
     stock.quantity -= quantity
     db.merge(stock)
     
